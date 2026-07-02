@@ -1,0 +1,348 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Grenze Gotisch", "Times New Roman", serif;
+  --font-sans: "Grenze", Georgia, "Times New Roman", serif;
+
+  /* aged bone / parchment */
+  --color-sand-50: #f7f1e0;
+  --color-sand-100: #efe5ca;
+  --color-sand-200: #e3d2ab;
+  --color-sand-300: #d3ba87;
+  --color-sand-400: #bf9f66;
+  --color-sand-500: #a5824d;
+  --color-sand-600: #89683c;
+  --color-sand-700: #6c502e;
+  --color-sand-800: #4e3920;
+  --color-sand-900: #322414;
+
+  /* oxblood ember copper */
+  --color-clay-50: #fbeee6;
+  --color-clay-100: #f4d8c6;
+  --color-clay-200: #e7b194;
+  --color-clay-300: #d98a66;
+  --color-clay-400: #c86842;
+  --color-clay-500: #ae4d2c;
+  --color-clay-600: #903b21;
+  --color-clay-700: #712c19;
+  --color-clay-800: #511f12;
+  --color-clay-900: #33130b;
+
+  /* verdigris — oxidised copper */
+  --color-sage-50: #edf6f0;
+  --color-sage-100: #d8ecdf;
+  --color-sage-200: #b3d8c2;
+  --color-sage-300: #8abfa2;
+  --color-sage-400: #64a284;
+  --color-sage-500: #49876a;
+  --color-sage-600: #396d55;
+  --color-sage-700: #2d5543;
+  --color-sage-800: #213e32;
+  --color-sage-900: #152820;
+
+  /* arcane glow teal */
+  --color-teal-50: #e8f6f7;
+  --color-teal-100: #ccebee;
+  --color-teal-200: #9dd7dd;
+  --color-teal-300: #6cbdc8;
+  --color-teal-400: #44a0af;
+  --color-teal-500: #2d8595;
+  --color-teal-600: #246b7a;
+  --color-teal-700: #1d5461;
+  --color-teal-800: #163e48;
+  --color-teal-900: #0d272e;
+
+  /* tarnished brass */
+  --color-gold-50: #fbf5e2;
+  --color-gold-100: #f5e5b8;
+  --color-gold-200: #ecd085;
+  --color-gold-300: #e0b654;
+  --color-gold-400: #d19e34;
+  --color-gold-500: #b78325;
+  --color-gold-600: #96681c;
+  --color-gold-700: #745016;
+  --color-gold-800: #51380f;
+  --color-gold-900: #302107;
+
+  /* obsidian violet (ink) */
+  --color-pine-50: #f2f1f5;
+  --color-pine-100: #e1dfe8;
+  --color-pine-200: #c4c0d1;
+  --color-pine-300: #a09bb2;
+  --color-pine-400: #7a748e;
+  --color-pine-500: #5c566e;
+  --color-pine-600: #474156;
+  --color-pine-700: #383345;
+  --color-pine-800: #2b2736;
+  --color-pine-850: #231f2d;
+  --color-pine-900: #1b1824;
+  --color-pine-950: #121019;
+
+  /* bronze shadow */
+  --color-bark-300: #a98a68;
+  --color-bark-500: #63472f;
+  --color-bark-700: #443021;
+}
+
+/* semantic surfaces — parchment grimoire (light), obsidian arcanum (dark) */
+:root {
+  --bg: #efe5ca;
+  --bg-soft: #e3d2ab;
+  --card: #f7f1e0;
+  --card-2: #e9dcba;
+  --ink: #2b2333;
+  --muted: #6b6070;
+  --line: #cfbf9d;
+  --focus: #246b7a;
+  --ember: #d19e34;
+}
+.dark {
+  --bg: #121019;
+  --bg-soft: #17141f;
+  --card: #1b1824;
+  --card-2: #241f30;
+  --ink: #e9e0ca;
+  --muted: #a198a8;
+  --line: #35304a;
+  --focus: #6cbdc8;
+  --ember: #e0b654;
+}
+.hc {
+  --muted: #3c3440;
+  --line: #8d8060;
+  --ink: #171220;
+}
+.dark.hc {
+  --muted: #d8d0dc;
+  --line: #6c6390;
+  --ink: #f8f2e2;
+}
+
+/* Lenis drives smooth scrolling; native smooth is off so the two never fight */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 0.6s ease,
+    color 0.6s ease;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #d19e34;
+  color: #1b1824;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.qa-card {
+  background-color: var(--card);
+  border: 1px solid var(--line);
+}
+.qa-muted {
+  color: var(--muted);
+}
+.qa-line {
+  border-color: var(--line);
+}
+
+/* candle-warm glow for headings and sigils */
+.rune-glow {
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--ember) 45%, transparent),
+    0 0 46px color-mix(in srgb, var(--ember) 18%, transparent);
+}
+
+/* ornamental rule with a centred fleuron */
+.qa-fleuron {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: var(--muted);
+}
+.qa-fleuron::before,
+.qa-fleuron::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+}
+.qa-fleuron::before {
+  background: linear-gradient(to right, transparent, var(--line));
+}
+.qa-fleuron::after {
+  background: linear-gradient(to left, transparent, var(--line));
+}
+
+/* subtle vellum grain */
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.36 0 0 0 0 0.30 0 0 0 0 0.42 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark .grain::after {
+  mix-blend-mode: screen;
+  opacity: 0.3;
+}
+
+/* slow ambient drift for background shapes (CSS-only so it is cheap) */
+@keyframes qa-drift {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(26px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+@keyframes qa-float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+@keyframes qa-shimmer {
+  0% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.55;
+  }
+}
+/* uneven lantern flicker — deliberately not a sine wave */
+@keyframes qa-flicker {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  8% {
+    opacity: 0.62;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  34% {
+    opacity: 0.78;
+  }
+  41% {
+    opacity: 1;
+  }
+  67% {
+    opacity: 0.7;
+  }
+  73% {
+    opacity: 0.92;
+  }
+}
+/* one slow revolution for orrery rings */
+@keyframes qa-orrery {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.anim-drift {
+  animation: qa-drift 24s ease-in-out infinite;
+}
+.anim-drift-slow {
+  animation: qa-drift 40s ease-in-out infinite;
+}
+.anim-float {
+  animation: qa-float 7s ease-in-out infinite;
+}
+.anim-float-slow {
+  animation: qa-float 11s ease-in-out infinite;
+}
+.anim-shimmer {
+  animation: qa-shimmer 5s ease-in-out infinite;
+}
+.anim-flicker {
+  animation: qa-flicker 6.5s steps(1, end) infinite;
+}
+.anim-orrery {
+  animation: qa-orrery 90s linear infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.anim-orrery-reverse {
+  animation: qa-orrery 140s linear infinite reverse;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+html.rm .anim-drift,
+html.rm .anim-drift-slow,
+html.rm .anim-float,
+html.rm .anim-float-slow,
+html.rm .anim-shimmer,
+html.rm .anim-flicker,
+html.rm .anim-orrery,
+html.rm .anim-orrery-reverse {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-drift,
+  .anim-drift-slow,
+  .anim-float,
+  .anim-float-slow,
+  .anim-shimmer,
+  .anim-flicker,
+  .anim-orrery,
+  .anim-orrery-reverse {
+    animation: none;
+  }
+}
+
+/* tiny press feedback for tiles and keys */
+.tile-pop {
+  animation: qa-pop 0.12s ease-out;
+}
+@keyframes qa-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+html.rm .tile-pop {
+  animation: none;
+}
