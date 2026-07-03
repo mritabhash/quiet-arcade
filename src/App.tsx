@@ -4,6 +4,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import Lenis from "lenis";
 import { Nav } from "./components/Nav";
 import { Footer } from "./components/Footer";
+import { ArcadeCat } from "./components/ArcadeCat";
+import { ScrollWizard } from "./components/ScrollWizard";
+import { GamesDragon, StatsPrincess } from "./components/PageCharacters";
 import { EASE, ScrollProgress } from "./components/motion";
 import { SigilDial } from "./components/SigilDial";
 import { useSettings } from "./context/SettingsContext";
@@ -63,6 +66,12 @@ export default function App() {
       </a>
       <ScrollProgress />
       <SigilDial />
+      <ArcadeCat />
+      {/* page residents live here, outside the animated main, so
+          position:fixed truly pins them to the viewport */}
+      {location.pathname === "/" && <ScrollWizard />}
+      {location.pathname === "/games" && <GamesDragon />}
+      {location.pathname === "/stats" && <StatsPrincess />}
       <Nav />
       <div id="main-content" className="flex-1">
         <AnimatePresence mode="wait">

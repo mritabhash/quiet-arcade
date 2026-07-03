@@ -328,6 +328,243 @@ html.rm .anim-orrery-reverse {
   }
 }
 
+/* resident-character animations: the cat and the wizard */
+@keyframes qa-tailwag {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+.anim-tailwag {
+  animation: qa-tailwag 2.6s ease-in-out infinite;
+  transform-origin: 90% 90%;
+  transform-box: fill-box;
+}
+@keyframes qa-blink {
+  0%,
+  91%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.08);
+  }
+}
+.anim-blink {
+  animation: qa-blink 5s linear infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+@keyframes qa-trot {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+.anim-trot {
+  animation: qa-trot 0.34s ease-in-out infinite;
+}
+@keyframes qa-paw-a {
+  0%,
+  100% {
+    transform: rotate(10deg);
+  }
+  50% {
+    transform: rotate(-10deg);
+  }
+}
+@keyframes qa-paw-b {
+  0%,
+  100% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+.anim-paw-a {
+  animation: qa-paw-a 0.34s ease-in-out infinite;
+  transform-origin: top center;
+  transform-box: fill-box;
+}
+.anim-paw-b {
+  animation: qa-paw-b 0.34s ease-in-out infinite;
+  transform-origin: top center;
+  transform-box: fill-box;
+}
+@keyframes qa-snooze {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+.anim-snooze {
+  animation: qa-snooze 2.8s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+@keyframes qa-zfloat {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(9px, -18px);
+  }
+}
+.anim-zfloat {
+  animation: qa-zfloat 2.8s ease-out infinite;
+}
+.anim-zfloat-late {
+  animation: qa-zfloat 2.8s ease-out 1.4s infinite;
+}
+@keyframes qa-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.anim-twinkle {
+  animation: qa-twinkle 1.8s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+@keyframes qa-flap {
+  0%,
+  100% {
+    transform: rotate(6deg);
+  }
+  50% {
+    transform: rotate(-14deg);
+  }
+}
+.anim-flap {
+  animation: qa-flap 1.1s ease-in-out infinite;
+  transform-origin: bottom right;
+  transform-box: fill-box;
+}
+.anim-flap-late {
+  animation: qa-flap 1.1s ease-in-out -0.55s infinite reverse;
+  transform-origin: bottom left;
+  transform-box: fill-box;
+}
+@keyframes qa-puff {
+  0%,
+  55% {
+    opacity: 0;
+    transform: translateX(0) scale(0.4);
+  }
+  62% {
+    opacity: 0.95;
+    transform: translateX(-2px) scale(0.9);
+  }
+  80% {
+    opacity: 0.7;
+    transform: translateX(-7px) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-13px) scale(1.3);
+  }
+}
+.anim-puff {
+  animation: qa-puff 4.5s ease-out infinite;
+  transform-origin: right center;
+  transform-box: fill-box;
+}
+@keyframes qa-wave {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  70%,
+  86% {
+    transform: rotate(-16deg);
+  }
+  78%,
+  94% {
+    transform: rotate(10deg);
+  }
+}
+.anim-wave {
+  animation: qa-wave 5.5s ease-in-out infinite;
+  transform-origin: bottom left;
+  transform-box: fill-box;
+}
+@keyframes qa-flutter {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.3);
+  }
+}
+.anim-flutter {
+  animation: qa-flutter 0.22s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+html.rm .anim-flap,
+html.rm .anim-flap-late,
+html.rm .anim-puff,
+html.rm .anim-wave,
+html.rm .anim-flutter {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-flap,
+  .anim-flap-late,
+  .anim-puff,
+  .anim-wave,
+  .anim-flutter {
+    animation: none;
+  }
+}
+html.rm .anim-tailwag,
+html.rm .anim-blink,
+html.rm .anim-trot,
+html.rm .anim-paw-a,
+html.rm .anim-paw-b,
+html.rm .anim-snooze,
+html.rm .anim-zfloat,
+html.rm .anim-zfloat-late,
+html.rm .anim-twinkle {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-tailwag,
+  .anim-blink,
+  .anim-trot,
+  .anim-paw-a,
+  .anim-paw-b,
+  .anim-snooze,
+  .anim-zfloat,
+  .anim-zfloat-late,
+  .anim-twinkle {
+    animation: none;
+  }
+}
+
 /* tiny press feedback for tiles and keys */
 .tile-pop {
   animation: qa-pop 0.12s ease-out;
