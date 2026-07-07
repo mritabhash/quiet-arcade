@@ -271,8 +271,98 @@ function HigherLowerIcon() {
   );
 }
 
+function TimeCapsuleIcon() {
+  const loop = useLoop();
+  return (
+    <svg viewBox="0 0 48 48" className="h-full w-full" aria-hidden>
+      {/* archive card */}
+      <rect x={7} y={10} width={34} height={28} rx={3} fill="var(--card-2)" stroke="var(--line)" strokeWidth={1.5} />
+      <path d="M12 17 H30 M12 22 H36 M12 27 H26" stroke="var(--muted)" strokeWidth={1.6} strokeLinecap="round" opacity={0.6} />
+      {/* wax-seal clock */}
+      {loop ? (
+        <motion.g animate={{ rotate: [0, 6, 0, -6, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} style={{ originX: "72%", originY: "68%" }}>
+          <circle cx={34.5} cy={32.5} r={7.5} fill="#d9a741" stroke="#8a6a3a" strokeWidth={1.4} />
+          <path d="M34.5 32.5 L34.5 27.5 M34.5 32.5 L38 34" stroke="#5c4322" strokeWidth={1.8} strokeLinecap="round" />
+        </motion.g>
+      ) : (
+        <g>
+          <circle cx={34.5} cy={32.5} r={7.5} fill="#d9a741" stroke="#8a6a3a" strokeWidth={1.4} />
+          <path d="M34.5 32.5 L34.5 27.5 M34.5 32.5 L38 34" stroke="#5c4322" strokeWidth={1.8} strokeLinecap="round" />
+        </g>
+      )}
+    </svg>
+  );
+}
+
+function BorderlineIcon() {
+  const loop = useLoop();
+  return (
+    <svg viewBox="0 0 48 48" className="h-full w-full" aria-hidden>
+      {/* dashed border rings closing on the hidden place */}
+      <circle cx={24} cy={24} r={17} fill="none" stroke="var(--muted)" strokeWidth={1.4} strokeDasharray="4 4" opacity={0.55} />
+      {loop ? (
+        <motion.circle
+          cx={24}
+          cy={24}
+          r={11}
+          fill="none"
+          stroke="#37837b"
+          strokeWidth={1.8}
+          strokeDasharray="4 4"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+          style={{ originX: "50%", originY: "50%" }}
+        />
+      ) : (
+        <circle cx={24} cy={24} r={11} fill="none" stroke="#37837b" strokeWidth={1.8} strokeDasharray="4 4" />
+      )}
+      {loop ? (
+        <motion.circle cx={24} cy={24} r={4.5} fill="#bc6140" animate={{ scale: [1, 1.2, 1] }} transition={slow} style={{ originX: "50%", originY: "50%" }} />
+      ) : (
+        <circle cx={24} cy={24} r={4.5} fill="#bc6140" />
+      )}
+      <circle cx={24} cy={24} r={1.6} fill="#faf6ec" />
+    </svg>
+  );
+}
+
+function TriviaIcon() {
+  const loop = useLoop();
+  return (
+    <svg viewBox="0 0 48 48" className="h-full w-full" aria-hidden>
+      {/* a stack of question cards with a glowing mark */}
+      <rect x={10} y={13} width={26} height={26} rx={5} fill="none" stroke="var(--muted)" strokeWidth={1.4} opacity={0.5} transform="rotate(-6 23 26)" />
+      <rect x={12} y={11} width={26} height={26} rx={5} className="fill-sand-200 dark:fill-pine-800" stroke="#37837b" strokeWidth={1.8} transform="rotate(3 25 24)" />
+      {loop ? (
+        <motion.path
+          d="M21 21 q0 -4 4 -4 q4.4 0 4.4 3.6 q0 2.6-3 3.6 q-1.4.5-1.4 2.4"
+          fill="none"
+          stroke="#bc6140"
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          animate={{ opacity: [1, 0.55, 1] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ) : (
+        <path
+          d="M21 21 q0 -4 4 -4 q4.4 0 4.4 3.6 q0 2.6-3 3.6 q-1.4.5-1.4 2.4"
+          fill="none"
+          stroke="#bc6140"
+          strokeWidth={2.4}
+          strokeLinecap="round"
+        />
+      )}
+      <circle cx={25.2} cy={31.6} r={1.5} fill="#d19e34" />
+    </svg>
+  );
+}
+
 export function GameIcon({ id }: { id: GameId }) {
   switch (id) {
+    case "time-capsule":
+      return <TimeCapsuleIcon />;
+    case "borderline":
+      return <BorderlineIcon />;
     case "word-grid":
       return <WordGridIcon />;
     case "pattern-groups":
@@ -293,5 +383,7 @@ export function GameIcon({ id }: { id: GameId }) {
       return <TimeLensIcon />;
     case "higher-lower":
       return <HigherLowerIcon />;
+    case "trivia":
+      return <TriviaIcon />;
   }
 }

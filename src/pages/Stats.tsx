@@ -9,7 +9,11 @@ import {
   effectiveStreak,
 } from "../lib/storage";
 import { todayKey, prettyDate } from "../lib/date";
+import { flagshipStatsFor } from "../lib/flagship";
+import type { GameId } from "../types";
 import { GameIcon } from "../components/icons";
+
+const FLAGSHIP_IDS: GameId[] = ["map-drop", "time-capsule", "borderline"];
 
 export function StatsPage() {
   const [version, setVersion] = useState(0);
@@ -36,7 +40,7 @@ export function StatsPage() {
   const secondary = [
     { label: "Daily challenges completed", value: String(stats.dailyCompleted) },
     { label: "Practice rounds played", value: String(stats.practiceRounds) },
-    { label: "Dailies finished today", value: `${Object.keys(daily).length} / 10` },
+    { label: "Dailies finished today", value: `${Object.keys(daily).length} / 12` },
     { label: "Last played", value: stats.lastPlayed ? prettyDate(stats.lastPlayed) : "Never — yet" },
     { label: "Most played game", value: mostPlayed ? mostPlayed.title : "No favourite yet" },
   ];
@@ -74,6 +78,55 @@ export function StatsPage() {
           ))}
         </div>
       </BlurReveal>
+
+      <BlurReveal delay={0.12} className="mt-10">
+        <h2 className="font-display text-2xl font-semibold">The flagship expeditions</h2>
+        <p className="mt-1 text-sm qa-muted">
+          Daily rounds and free play are counted separately for the three big games.
+        </p>
+      </BlurReveal>
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        {FLAGSHIP_IDS.map((id, i) => {
+          const meta = GAME_INDEX[id];
+          const fs = flagshipStatsFor(id);
+          const avg = fs.freePlays > 0 ? Math.round(fs.freeScoreSum / fs.freePlays) : 0;
+          const rows = [
+            ["Daily plays", String(fs.dailyPlays)],
+            ["Best daily", fs.bestDailyMax ? `${fs.bestDaily.toLocaleString()}/${fs.bestDailyMax.toLocaleString()}` : "—"],
+            ["Perfect dailies", String(fs.perfectDailies)],
+            ["Free-play rounds", String(fs.freePlays)],
+            ["Best free play", fs.bestFreeMax ? `${fs.bestFree.toLocaleString()}/${fs.bestFreeMax.toLocaleString()}` : "—"],
+            ["Average free score", fs.freePlays ? avg.toLocaleString() : "—"],
+            ["Wins", String(fs.wins)],
+            ["Hints / guesses used", String(fs.hintsUsed)],
+          ] as const;
+          return (
+            <BlurReveal key={id} delay={i * 0.08}>
+              <div className="qa-card grain h-full rounded-2xl p-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 shrink-0 rounded-xl bg-[var(--card-2)] p-1.5">
+                    <GameIcon id={id} />
+                  </div>
+                  <p className="font-display text-xl font-semibold">{meta.title}</p>
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
+                  {rows.map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-[10px] font-bold uppercase tracking-widest qa-muted">{label}</dt>
+                      <dd className="text-sm font-semibold">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {fs.recentPuzzles.length > 0 && (
+                  <p className="mt-3 truncate text-xs qa-muted" title={fs.recentPuzzles.slice(0, 5).join(", ")}>
+                    Recently: {fs.recentPuzzles.slice(0, 4).join(", ")}
+                  </p>
+                )}
+              </div>
+            </BlurReveal>
+          );
+        })}
+      </div>
 
       <BlurReveal delay={0.15} className="mt-10">
         <h2 className="font-display text-2xl font-semibold">Game by game</h2>

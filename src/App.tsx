@@ -5,6 +5,8 @@ import Lenis from "lenis";
 import { Nav } from "./components/Nav";
 import { Footer } from "./components/Footer";
 import { ArcadeCat } from "./components/ArcadeCat";
+import { GlowWorms } from "./components/GlowWorms";
+import { AmbientRain } from "./components/AmbientRain";
 import { ScrollWizard } from "./components/ScrollWizard";
 import { GamesDragon, StatsPrincess } from "./components/PageCharacters";
 import { EASE, ScrollProgress } from "./components/motion";
@@ -14,6 +16,7 @@ import { HomePage } from "./pages/Home";
 import { GamesPage } from "./pages/Games";
 import { StatsPage } from "./pages/Stats";
 import { SettingsPage } from "./pages/Settings";
+import { LorePage } from "./pages/Lore";
 import { NotFoundPage } from "./pages/NotFound";
 import { GamePage } from "./pages/GamePage";
 
@@ -65,6 +68,8 @@ export default function App() {
         Skip to content
       </a>
       <ScrollProgress />
+      <AmbientRain />
+      <GlowWorms />
       <SigilDial />
       <ArcadeCat />
       {/* page residents live here, outside the animated main, so
@@ -80,6 +85,7 @@ export default function App() {
             <Route path="/games" element={<Page><GamesPage /></Page>} />
             <Route path="/games/:gameId" element={<Page><GamePage /></Page>} />
             <Route path="/stats" element={<Page><StatsPage /></Page>} />
+            <Route path="/lore" element={<Page><LorePage /></Page>} />
             <Route path="/settings" element={<Page><SettingsPage /></Page>} />
             <Route path="*" element={<Page><NotFoundPage /></Page>} />
           </Routes>

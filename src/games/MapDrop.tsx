@@ -1,210 +1,303 @@
-import { useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import type { GameApi } from "../types";
-import { mulberry32, sample } from "../lib/random";
-import { CITIES, CONTINENTS, distanceKm, type City } from "../data/cities";
-import { Button } from "../components/ui";
-import { Counter } from "../components/motion";
+import { rngFor, pickIndex } from "../lib/random";
+import { CITIES, distanceKm } from "../data/cities";
+import { MAP_DROP_PUZZLES } from "../data/mapDropPuzzles";
+import { pickFreshIndex, recordFlagshipRound } from "../lib/flagship";
+import { WorldMap, toXY } from "../components/WorldMap";
+import { Button, Chip } from "../components/ui";
+import { Counter, EASE } from "../components/motion";
+import { RabbitGuide, type RabbitMood } from "../components/RabbitGuide";
 
-const toXY = (lon: number, lat: number) => ({ x: lon + 180, y: 90 - lat });
+/** Score ceiling by hints used — index is (hintsUsed - 3). */
+const HINT_POINTS = [5000, 4200, 3400, 2500, 1500] as const;
+const MAX_SCORE = 5000;
+/** Full points inside this radius; score fades to zero at FADE_KM. */
+const BULLSEYE_KM = 25;
+const FADE_KM = 1500;
 
-function pointsFor(dist: number): number {
-  if (dist <= 40) return 100;
-  return Math.max(0, Math.round(100 - dist / 60));
+const LINES = {
+  start: ["Three hints. Drop wisely.", "Trust the weather.", "Food clues matter."],
+  reveal: ["Careful, hints cost points.", "Okay… that one cost us.", "The picture sharpens."],
+  lastHint: ["That's all I've got. Drop it."],
+  tempted: ["One more hint?", "Do you really need it?"],
+  pinMoved: ["That pin feels brave.", "Bold drop.", "Watching. Closely."],
+  sleepy: ["Tick tock, detective.", "The map isn't going anywhere…"],
+  celebrate: ["The rabbit council approves.", "That was suspiciously good."],
+  happy: ["Solid drop. Claps.", "Nicely read."],
+  squint: ["You're close.", "So close I can taste it."],
+  shocked: ["Wrong continent, bestie.", "That pin went on a journey."],
+};
+
+const randomOf = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+/** Label the player's pin by the closest charted place, e.g. "near Dhaka". */
+function nearestLabel(lat: number, lon: number): string {
+  let best = { name: "", country: "", d: Infinity };
+  for (const p of [...MAP_DROP_PUZZLES, ...CITIES]) {
+    const d = distanceKm(lat, lon, p.lat, p.lon);
+    if (d < best.d) best = { name: p.name, country: p.country, d };
+  }
+  return best.d > 1200 ? "somewhere far off the charts" : `near ${best.name}, ${best.country}`;
 }
 
-interface RoundResult {
-  city: City;
-  guess: { x: number; y: number };
+interface Outcome {
+  pin: { x: number; y: number };
+  pinLabel: string;
   dist: number;
-  points: number;
+  base: number;
+  score: number;
 }
 
 export function MapDropGame({ api }: { api: GameApi }) {
-  const cities = useMemo(() => sample(mulberry32(api.seed), CITIES, 5), [api.seed]);
-  const [round, setRound] = useState(0);
-  const [results, setResults] = useState<RoundResult[]>([]);
-  const [cursor, setCursor] = useState({ x: 180, y: 90 });
-  const [pending, setPending] = useState<RoundResult | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  const total = results.reduce((s, r) => s + r.points, 0);
-  const city = cities[round];
-
-  const drop = (x: number, y: number) => {
-    if (pending || round >= 5) return;
-    const guessLat = 90 - y;
-    const guessLon = x - 180;
-    const dist = Math.round(distanceKm(guessLat, guessLon, city.lat, city.lon));
-    const res: RoundResult = { city, guess: { x, y }, dist, points: pointsFor(dist) };
-    setPending(res);
-  };
-
-  const nextRound = () => {
-    if (!pending) return;
-    const nextResults = [...results, pending];
-    setResults(nextResults);
-    setPending(null);
-    if (round + 1 >= 5) {
-      const score = nextResults.reduce((s, r) => s + r.points, 0);
-      setTimeout(() => {
-        api.finish({
-          score,
-          max: 500,
-          perfect: score >= 450,
-          label: `Average miss: ${Math.round(nextResults.reduce((s, r) => s + r.dist, 0) / 5).toLocaleString()} km.`,
-        });
-      }, 500);
-    } else {
-      setRound(round + 1);
+  const place = useMemo(() => {
+    const rng = rngFor([api.seed]);
+    // daily stays purely date-deterministic; free play skips recent rounds
+    if (api.mode === "daily") {
+      return MAP_DROP_PUZZLES[pickIndex(rng, MAP_DROP_PUZZLES.length)];
     }
+    const ids = MAP_DROP_PUZZLES.map((p) => p.id);
+    return MAP_DROP_PUZZLES[pickFreshIndex("map-drop", ids, rng)];
+  }, [api.seed, api.mode]);
+
+  const [revealed, setRevealed] = useState(3);
+  const [pin, setPin] = useState<{ x: number; y: number } | null>(null);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [rabbit, setRabbit] = useState<{ mood: RabbitMood; line: string }>(() => ({
+    mood: "curious",
+    line: randomOf(LINES.start),
+  }));
+  const beforeTempt = useRef<{ mood: RabbitMood; line: string } | null>(null);
+  const [poke, setPoke] = useState(0);
+
+  const say = (mood: RabbitMood, lines: string[]) =>
+    setRabbit({ mood, line: randomOf(lines) });
+  const bump = () => setPoke((p) => p + 1);
+
+  // If the player stalls, the rabbit checks its tiny watch.
+  useEffect(() => {
+    if (outcome) return;
+    const t = setTimeout(
+      () => setRabbit({ mood: "sleepy", line: randomOf(LINES.sleepy) }),
+      45000,
+    );
+    return () => clearTimeout(t);
+  }, [poke, outcome]);
+
+  const ceiling = HINT_POINTS[revealed - 3];
+
+  const revealHint = () => {
+    if (revealed >= 7 || outcome) return;
+    const n = revealed + 1;
+    setRevealed(n);
+    beforeTempt.current = null;
+    say("investigating", n === 7 ? LINES.lastHint : LINES.reveal);
+    bump();
   };
 
-  const onMapClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return;
-    const p = pt.matrixTransform(ctm.inverse());
-    drop(Math.max(0, Math.min(360, p.x)), Math.max(0, Math.min(180, p.y)));
+  const onTemptEnter = () => {
+    if (outcome) return;
+    beforeTempt.current = rabbit;
+    say("tempted", LINES.tempted);
+  };
+  const onTemptLeave = () => {
+    if (outcome || !beforeTempt.current) return;
+    setRabbit(beforeTempt.current);
+    beforeTempt.current = null;
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    const step = e.shiftKey ? 10 : 3;
-    if (e.key === "ArrowLeft") setCursor((c) => ({ ...c, x: Math.max(0, c.x - step) }));
-    else if (e.key === "ArrowRight") setCursor((c) => ({ ...c, x: Math.min(360, c.x + step) }));
-    else if (e.key === "ArrowUp") setCursor((c) => ({ ...c, y: Math.max(0, c.y - step) }));
-    else if (e.key === "ArrowDown") setCursor((c) => ({ ...c, y: Math.min(180, c.y + step) }));
-    else if (e.key === "Enter" || e.key === " ") drop(cursor.x, cursor.y);
-    else return;
-    e.preventDefault();
+  const onPinPlaced = () => {
+    if (outcome) return;
+    if (rabbit.mood !== "pointing") say("pointing", LINES.pinMoved);
+    bump();
   };
 
-  const actual = toXY(city?.lon ?? 0, city?.lat ?? 0);
+  const confirmDrop = () => {
+    if (!pin || outcome) return;
+    const dist = Math.round(distanceKm(90 - pin.y, pin.x - 180, place.lat, place.lon));
+    const factor = dist <= BULLSEYE_KM ? 1 : Math.max(0, 1 - dist / FADE_KM);
+    const score = Math.round(ceiling * factor);
+    setOutcome({
+      pin,
+      pinLabel: nearestLabel(90 - pin.y, pin.x - 180),
+      dist,
+      base: ceiling,
+      score,
+    });
+    if (score === MAX_SCORE || dist <= 100) say("celebrate", LINES.celebrate);
+    else if (dist <= 600) say("happy", LINES.happy);
+    else if (dist <= 2500) say("squint", LINES.squint);
+    else say("shocked", LINES.shocked);
+  };
 
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest qa-muted">
-            City {Math.min(round + 1, 5)} of 5
-          </p>
-          <p className="font-display text-2xl font-semibold" aria-live="polite">
-            {city ? `${city.name}` : "Done"}
-            {city && <span className="ml-2 text-base font-normal qa-muted">{city.country}</span>}
+  const finishRound = () => {
+    if (!outcome) return;
+    recordFlagshipRound("map-drop", api.mode, {
+      score: outcome.score,
+      max: MAX_SCORE,
+      won: outcome.dist <= 600,
+      perfect: outcome.score === MAX_SCORE,
+      hintsUsed: revealed,
+      puzzleId: place.id,
+    });
+    api.finish({
+      score: outcome.score,
+      max: MAX_SCORE,
+      perfect: outcome.score === MAX_SCORE,
+      label: `${place.name}, ${place.country} — ${revealed}/7 hints, ${outcome.dist.toLocaleString()} km off.`,
+      share: [
+        "Quiet Arcade: Map Drop",
+        `Score: ${outcome.score.toLocaleString()}/${MAX_SCORE.toLocaleString()}`,
+        `Distance: ${outcome.dist.toLocaleString()} km`,
+        `Hints used: ${revealed}/7`,
+        `Mode: ${api.mode === "daily" ? "Daily" : "Free Play"}`,
+      ],
+    });
+  };
+
+  /* ------------------------------------------------ post-guess */
+  if (outcome) {
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest qa-muted">
+              {outcome.dist <= 600 ? "Pin down" : "The pin wandered"}
+            </p>
+            <h2 className="mt-1 font-display text-2xl font-semibold" aria-live="polite">
+              {place.name}, {place.country}
+            </h2>
+          </div>
+          <p className="font-display text-3xl font-semibold">
+            <Counter value={outcome.score} />
+            <span className="text-base font-normal qa-muted"> / {MAX_SCORE.toLocaleString()}</span>
           </p>
         </div>
-        <p className="font-display text-xl font-semibold">
-          <Counter value={total} /> <span className="text-sm qa-muted">pts</span>
-        </p>
+
+        <WorldMap
+          pin={outcome.pin}
+          actual={toXY(place.lon, place.lat)}
+          ariaLabel={`Result map. Your pin landed ${outcome.dist.toLocaleString()} kilometres from ${place.name}.`}
+        />
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Your pin" value={outcome.pinLabel} />
+          <Stat label="Distance" value={`${outcome.dist.toLocaleString()} km`} />
+          <Stat label="Hints used" value={`${revealed} / 7`} />
+          <Stat label="Ceiling" value={`${outcome.base.toLocaleString()} pts`} />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5, ease: EASE }}
+          className="qa-card rounded-2xl p-5"
+        >
+          <p className="text-xs font-bold uppercase tracking-widest qa-muted">Why</p>
+          <p className="mt-2 text-sm leading-snug">{place.why}</p>
+        </motion.div>
+
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <RabbitGuide mood={rabbit.mood} line={rabbit.line} />
+          <Button onClick={finishRound}>Bank the score</Button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ----------------------------------------------------- play */
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest qa-muted">Hidden place</p>
+          <h2 className="mt-1 font-display text-2xl font-semibold">Read hints. Drop pin.</h2>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-2xl font-semibold">
+            {ceiling.toLocaleString()}
+            <span className="text-sm font-normal qa-muted"> pts possible</span>
+          </p>
+          <p className="text-xs qa-muted">{revealed} / 7 hints</p>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)]">
-        <svg
-          ref={svgRef}
-          viewBox="0 0 360 180"
-          className="block w-full cursor-crosshair bg-teal-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-500 dark:bg-teal-900"
-          onClick={onMapClick}
-          onKeyDown={onKeyDown}
-          tabIndex={0}
-          role="application"
-          aria-label={`World map. Use arrow keys to move the crosshair, Enter to drop the pin for ${city?.name ?? "the city"}.`}
-        >
-          {CONTINENTS.map((ring, i) => (
-            <polygon
-              key={i}
-              points={ring.map(([lon, lat]) => {
-                const { x, y } = toXY(lon, lat);
-                return `${x},${y}`;
-              }).join(" ")}
-              className="fill-sand-300 stroke-sand-600 dark:fill-pine-700 dark:stroke-pine-500"
-              strokeWidth={0.4}
-            />
-          ))}
+      <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)]">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2.5" aria-live="polite">
+            {place.hints.slice(0, revealed).map((hint, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -18, filter: "blur(6px)" }}
+                animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.5, ease: EASE, delay: i < 3 ? i * 0.15 : 0 }}
+                className="qa-card rounded-2xl px-4 py-3"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-widest qa-muted">
+                  Hint {i + 1}
+                </p>
+                <p className="mt-0.5 text-sm font-medium leading-snug">{hint}</p>
+              </motion.div>
+            ))}
+          </div>
 
-          {/* keyboard crosshair */}
-          {!pending && (
-            <g className="pointer-events-none opacity-60">
-              <circle cx={cursor.x} cy={cursor.y} r={2.4} fill="none" stroke="#7d3a27" strokeWidth={0.8} />
-              <path
-                d={`M${cursor.x - 5} ${cursor.y} H${cursor.x + 5} M${cursor.x} ${cursor.y - 5} V${cursor.y + 5}`}
-                stroke="#7d3a27"
-                strokeWidth={0.6}
-              />
-            </g>
+          {revealed < 7 ? (
+            <button
+              onClick={revealHint}
+              onMouseEnter={onTemptEnter}
+              onMouseLeave={onTemptLeave}
+              onFocus={onTemptEnter}
+              onBlur={onTemptLeave}
+              className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-3 text-left transition-colors hover:bg-[var(--card-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            >
+              <p className="text-sm font-semibold">Reveal hint {revealed + 1}</p>
+              <p className="text-xs qa-muted">
+                Lowers your ceiling to {HINT_POINTS[revealed - 2].toLocaleString()} pts
+              </p>
+            </button>
+          ) : (
+            <Chip className="self-start">All seven hints are out</Chip>
           )}
 
-          <AnimatePresence>
-            {pending && (
-              <g className="pointer-events-none">
-                <motion.line
-                  x1={pending.guess.x}
-                  y1={pending.guess.y}
-                  x2={actual.x}
-                  y2={actual.y}
-                  stroke="#7d3a27"
-                  strokeWidth={0.8}
-                  strokeDasharray="2 2"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.7, delay: 0.35 }}
-                />
-                <motion.circle
-                  cx={actual.x}
-                  cy={actual.y}
-                  r={2.6}
-                  fill="#37837b"
-                  stroke="#faf6ec"
-                  strokeWidth={0.8}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 15 }}
-                />
-                <motion.g
-                  initial={{ y: -18, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 18 }}
-                >
-                  <circle cx={pending.guess.x} cy={pending.guess.y} r={2.6} fill="#bc6140" stroke="#faf6ec" strokeWidth={0.8} />
-                </motion.g>
-              </g>
-            )}
-          </AnimatePresence>
-        </svg>
-      </div>
+          <div className="mt-auto pt-3">
+            <RabbitGuide mood={rabbit.mood} line={rabbit.line} />
+          </div>
+        </div>
 
-      <div className="flex min-h-16 items-center justify-between gap-4" aria-live="polite">
-        {pending ? (
-          <>
-            <p className="text-sm">
-              <span className="font-display text-lg font-bold">{pending.dist.toLocaleString()} km</span>{" "}
-              <span className="qa-muted">from {pending.city.name}</span>
-              <span className="ml-3 rounded-full bg-gold-200 px-2.5 py-1 text-xs font-bold text-gold-800 dark:bg-gold-700 dark:text-gold-100">
-                +{pending.points} pts
-              </span>
-            </p>
-            <Button onClick={nextRound}>{round + 1 >= 5 ? "See final score" : "Next city"}</Button>
-          </>
-        ) : (
-          <p className="text-sm qa-muted">
-            Click the map — or focus it and steer with the arrow keys, then press Enter.
-          </p>
-        )}
-      </div>
-
-      <div className="flex gap-1.5" aria-label="Round progress">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className={`h-1.5 flex-1 rounded-full ${
-              i < results.length ? "bg-teal-500" : i === round && !pending ? "bg-gold-400" : "bg-[var(--card-2)]"
-            }`}
+        <div className="flex flex-col gap-3">
+          <WorldMap
+            pin={pin}
+            actual={null}
+            onPin={(x, y) => setPin({ x, y })}
+            onDropEnd={onPinPlaced}
+            ariaLabel="World map. Click or drag to place your pin. With the keyboard, use arrow keys to aim, plus and minus to zoom, and Enter to drop."
           />
-        ))}
+
+          <div className="flex items-center gap-3">
+            <Button onClick={confirmDrop} disabled={!pin}>
+              Confirm drop
+            </Button>
+            <p className="text-xs leading-snug qa-muted">
+              {pin
+                ? "Drag the pin to adjust, then confirm. Closer keeps more points."
+                : "Click the map to drop your pin. Scroll or pinch to zoom in."}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="qa-card rounded-2xl px-4 py-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest qa-muted">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-semibold" title={value}>
+        {value}
+      </p>
+    </div>
+  );
+}
+

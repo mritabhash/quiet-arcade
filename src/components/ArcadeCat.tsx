@@ -10,7 +10,7 @@ import { useSettings } from "../context/SettingsContext";
  * and comes back when she pleases. Reduced motion sends her to a quiet sit.
  */
 
-type Pose = "sit" | "walk" | "stretch" | "yawn" | "jump" | "sleep";
+type Pose = "sit" | "walk" | "stretch" | "yawn" | "jump" | "sleep" | "purr";
 type Mood = "lazy" | "curious" | "playful";
 type Toy = "ball" | "butterfly" | "mouse";
 
@@ -104,6 +104,27 @@ function CatArt({ pose }: { pose: Pose }) {
           <text x="70" y="30" fontSize="8" fontFamily="Georgia, serif" fill="var(--muted)" className="anim-zfloat-late">z</text>
         </g>
       );
+    case "purr":
+      return (
+        <g>
+          <path d="M14 64 Q2 60 7 48" fill="none" stroke={STRIPE} strokeWidth="5" strokeLinecap="round" className="anim-tailwag" />
+          <ellipse cx="32" cy="50" rx="16" ry="17" fill={FUR} />
+          <path d="M22 40 Q26 49 22 58 M32 38 Q36 48 32 58" fill="none" stroke={STRIPE} strokeWidth="3" strokeLinecap="round" opacity="0.75" />
+          <ellipse cx="38" cy="57" rx="8" ry="10" fill={CREAM} />
+          <rect x="30" y="58" width="5" height="9" rx="2.5" fill={FUR} />
+          <rect x="40" y="58" width="5" height="9" rx="2.5" fill={FUR} />
+          <circle cx="46" cy="31" r="13" fill={FUR} />
+          <path d="M36 23 L37 10 L45 18 Z" fill={FUR} />
+          <path d="M49 17 L56 8 L59 21 Z" fill={FUR} />
+          {/* eyes squeezed happy, cheeks warm */}
+          <path d="M39 30 Q42 26.5 45 30 M48 30 Q51 26.5 54 30" fill="none" stroke={INK} strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="39" cy="35" r="2.2" fill="#d9a8a0" opacity="0.65" />
+          <circle cx="54" cy="35" r="2.2" fill="#d9a8a0" opacity="0.65" />
+          <path d="M49 37 Q51 39 53 37" fill="none" stroke={INK} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M51 34 L53 36 L49 36 Z" fill={STRIPE} />
+          <text x="58" y="18" fontSize="9" fontFamily="Georgia, serif" fontStyle="italic" fill="var(--muted)" className="anim-zfloat">prr</text>
+        </g>
+      );
     default:
       return (
         <g>
@@ -178,12 +199,29 @@ export function ArcadeCat() {
   const [dir, setDir] = useState(1);
   const [prop, setProp] = useState<Toy | null>(null);
   const [propDir, setPropDir] = useState(1);
+  const [petCount, setPetCount] = useState(0);
+  const [hearts, setHearts] = useState<number[]>([]);
+  const heartId = useRef(0);
   const x = useMotionValue(typeof window === "undefined" ? 140 : Math.min(180, window.innerWidth * 0.2));
   const y = useMotionValue(0);
   const propX = useMotionValue(-100);
   const propY = useMotionValue(0);
   const propRot = useMotionValue(0);
   const moodRef = useRef<Mood>("curious");
+
+  // A pet: hearts rise, and she drops whatever she was doing to purr.
+  // Bumping petCount restarts the brain effect, which opens with a purr.
+  const pet = () => {
+    const ids = [heartId.current++, heartId.current++, heartId.current++];
+    setHearts((h) => [...h.slice(-6), ...ids]);
+    setTimeout(() => setHearts((h) => h.filter((id) => !ids.includes(id))), 1600);
+    if (motionOK) {
+      setPetCount((c) => c + 1);
+    } else {
+      setPose("purr");
+      setTimeout(() => setPose("sit"), 2200);
+    }
+  };
 
   useEffect(() => {
     if (!motionOK) {
@@ -362,14 +400,22 @@ export function ArcadeCat() {
       }
     };
 
-    later(act, 1200);
+    if (petCount > 0) {
+      // freshly petted: settle wherever she is and purr before resuming
+      y.set(0);
+      setProp(null);
+      setPose("purr");
+      later(act, 2600);
+    } else {
+      later(act, 1200);
+    }
     return () => {
       alive = false;
       timers.forEach(clearTimeout);
       anims.forEach((a) => a.stop());
       setProp(null);
     };
-  }, [motionOK, x, y, propX, propY, propRot]);
+  }, [motionOK, petCount, x, y, propX, propY, propRot]);
 
   return (
     <>
@@ -395,11 +441,34 @@ export function ArcadeCat() {
         </motion.div>
       )}
       <motion.div
-        aria-hidden
-        className="pointer-events-none fixed bottom-0 left-0 z-40 h-[4.5rem] w-[5.5rem]"
+        role="button"
+        tabIndex={0}
+        aria-label="Pet the cat"
+        title="Pet the cat"
+        className="fixed bottom-0 left-0 z-40 h-[4.5rem] w-[5.5rem] cursor-pointer select-none rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
         style={{ x }}
+        onPointerDown={pet}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            pet();
+          }
+        }}
       >
-        <motion.div style={{ y }} className="h-full w-full">
+        <motion.div style={{ y }} className="relative h-full w-full">
+          {hearts.map((id, i) => (
+            <motion.span
+              key={id}
+              aria-hidden
+              className="pointer-events-none absolute text-sm text-clay-500"
+              style={{ left: 26 + (id % 3) * 16, top: 4 }}
+              initial={{ opacity: 0, y: 8, scale: 0.5 }}
+              animate={{ opacity: [0, 1, 0], y: -28, scale: 1, rotate: (id % 2 ? 1 : -1) * 14 }}
+              transition={{ duration: 1.3, delay: (i % 3) * 0.12, ease: "easeOut" }}
+            >
+              ♥
+            </motion.span>
+          ))}
           <svg
             viewBox="0 0 90 70"
             className="h-full w-full overflow-visible drop-shadow-[0_2px_2px_rgba(20,16,30,0.35)]"

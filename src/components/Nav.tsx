@@ -7,6 +7,7 @@ const LINKS = [
   { to: "/", label: "Home" },
   { to: "/games", label: "Games" },
   { to: "/stats", label: "Stats" },
+  { to: "/lore", label: "Lore" },
   { to: "/settings", label: "Settings" },
 ];
 

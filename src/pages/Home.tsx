@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { motion, useTransform } from "framer-motion";
 import { GAMES } from "../data/games";
 import { GameCard } from "../components/GameCard";
-import { BlurReveal, Counter, EASE, VelocityMarquee } from "../components/motion";
+import { BlurReveal, Counter, EASE } from "../components/motion";
+import { KnightVigil } from "../components/KnightVigil";
 import { ArcaneScene, useHeroParallax } from "../components/ArcaneScene";
 import { loadStats, loadDailyCompletions, effectiveStreak } from "../lib/storage";
 import { todayKey } from "../lib/date";
@@ -41,7 +42,7 @@ export function HomePage() {
             </BlurReveal>
             <BlurReveal delay={0.24}>
               <p className="mt-5 max-w-md text-xl leading-relaxed text-pine-800/90 dark:text-sand-100/85">
-                Ten small rites of word, map, and memory. A fresh puzzle is inscribed each
+                Thirteen small rites of word, map, and memory. A fresh puzzle is inscribed each
                 midnight — played in hush, kept in your browser, owed to no one.
               </p>
             </BlurReveal>
@@ -76,31 +77,14 @@ export function HomePage() {
         </motion.div>
       </section>
 
-      {/* MARQUEE — keeps drifting, leans into your scroll */}
-      <section
-        aria-label="The disciplines"
-        className="border-y border-[var(--line)] bg-[var(--bg-soft)] py-5"
-      >
-        <VelocityMarquee
-          baseVelocity={-1.2}
-          className="font-display text-4xl font-medium text-pine-900/80 dark:text-sand-100/80 sm:text-5xl"
-        >
-          {"words ✦ maps ✦ memory ✦ logic ✦ omens ✦ trivia ✦ "}
-        </VelocityMarquee>
-        <VelocityMarquee
-          baseVelocity={1.2}
-          className="font-display text-4xl font-medium text-transparent [-webkit-text-stroke:1px_var(--muted)] sm:text-5xl"
-        >
-          {"one puzzle at midnight ✦ nothing leaves the vault ✦ "}
-        </VelocityMarquee>
-        <p className="sr-only">Words, maps, memory, logic, omens, trivia — one puzzle at midnight.</p>
-      </section>
+      {/* THE KNIGHT'S VIGIL — the hall's resident, living her own hours */}
+      <KnightVigil />
 
       {/* THE LEDGER */}
       <section aria-label="Your ledger" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {[
-            { big: <Counter value={doneCount} suffix=" / 10" />, small: "sigils sealed today" },
+            { big: <Counter value={doneCount} suffix=" / 12" />, small: "sigils sealed today" },
             { big: <Counter value={streak} />, small: "day streak — one seal keeps the flame" },
             { big: <Counter value={stats.totalPlays} />, small: "rounds etched all time" },
           ].map((item, i) => (
@@ -117,7 +101,7 @@ export function HomePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <BlurReveal>
             <p className="text-xs font-semibold uppercase tracking-[0.32em] text-teal-600 dark:text-teal-300">
-              the ten chambers
+              the thirteen chambers
             </p>
             <h2 className="mt-2 font-display text-5xl font-semibold sm:text-6xl">Choose a door</h2>
           </BlurReveal>

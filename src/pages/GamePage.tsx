@@ -10,10 +10,13 @@ import { MiniCrosswordGame } from "../games/MiniCrossword";
 import { HiddenStrandsGame } from "../games/HiddenStrands";
 import { LetterHiveGame } from "../games/LetterHive";
 import { MapDropGame } from "../games/MapDrop";
+import { TimeCapsuleGame } from "../games/TimeCapsule";
+import { BorderlineGame } from "../games/Borderline";
 import { GlobeHuntGame } from "../games/GlobeHunt";
 import { CountryShapeGame } from "../games/CountryShape";
 import { TimeLensGame } from "../games/TimeLens";
 import { HigherLowerGame } from "../games/HigherLower";
+import { TriviaGame } from "../games/Trivia";
 
 const COMPONENTS: Record<GameId, (props: { api: GameApi }) => React.ReactNode> = {
   "word-grid": WordGridGame,
@@ -22,10 +25,13 @@ const COMPONENTS: Record<GameId, (props: { api: GameApi }) => React.ReactNode> =
   "hidden-strands": HiddenStrandsGame,
   "letter-hive": LetterHiveGame,
   "map-drop": MapDropGame,
+  "time-capsule": TimeCapsuleGame,
+  "borderline": BorderlineGame,
   "globe-hunt": GlobeHuntGame,
   "country-shape": CountryShapeGame,
   "time-lens": TimeLensGame,
   "higher-lower": HigherLowerGame,
+  "trivia": TriviaGame,
 };
 
 export function GamePage() {

@@ -2,6 +2,63 @@ import type { GameMeta } from "../types";
 
 export const GAMES: GameMeta[] = [
   {
+    id: "map-drop",
+    title: "Map Drop",
+    short: "Use short clues to drop your marker as close as possible to the mystery location.",
+    description:
+      "One hidden place, seven short hints — weather, food, scripts, festivals. Drop your pin early for the full 5,000 points, or trade the ceiling for certainty while a small rabbit judges your bravery.",
+    minutes: "~4 min",
+    difficulty: "Medium",
+    type: "Geography",
+    accent: "teal",
+    flagship: true,
+    freePlayLabel: "Play another Map Drop",
+    howTo: [
+      "Read the first three hints and form a hunch.",
+      "Reveal up to four more — each one lowers the round's ceiling (5,000 → 1,500).",
+      "Click or drag on the map to place your pin, then press Confirm drop.",
+      "Closer pins keep more points: within 25 km is a bullseye, and points fade out by 1,500 km.",
+    ],
+  },
+  {
+    id: "time-capsule",
+    title: "Time Capsule",
+    short: "Study a mysterious scene and guess where and when it belongs.",
+    description:
+      "An archive card surfaces from the vault: a scene, a handful of clues, and no date. Pin the place on the map, pick the decade, and see how sharp your inner historian really is.",
+    minutes: "~4 min",
+    difficulty: "Medium",
+    type: "Geography",
+    accent: "gold",
+    flagship: true,
+    freePlayLabel: "Try a random Time Capsule",
+    howTo: [
+      "Read the archive card and the first three clues.",
+      "Reveal extra clues if you must — each costs 50 bonus points.",
+      "Drop a pin where the scene belongs, then pick a decade (or era).",
+      "Score comes from location accuracy, time accuracy, and clues saved.",
+    ],
+  },
+  {
+    id: "borderline",
+    title: "Borderline",
+    short: "Guess the hidden place using borders, distance, climate, population, and regional clues.",
+    description:
+      "A place is hiding. Every guess returns clean clue chips — distance, direction, borders, climate, population, coastline — until you corner it or run out of guesses. The feedback loop is the whole game.",
+    minutes: "~5 min",
+    difficulty: "Tricky",
+    type: "Geography",
+    accent: "sage",
+    flagship: true,
+    freePlayLabel: "Play Borderline Free Mode",
+    howTo: [
+      "Type any country, region, city, or island and pick it from the list.",
+      "Read the clue chips: distance, direction, borders, climate, population, coast.",
+      "Use them to narrow the field — you have six guesses.",
+      "Fewer guesses, higher score. First-guess solves are perfect rounds.",
+    ],
+  },
+  {
     id: "word-grid",
     title: "Daily Word Grid",
     short: "Six tries to find the five-letter word.",
@@ -86,22 +143,6 @@ export const GAMES: GameMeta[] = [
     ],
   },
   {
-    id: "map-drop",
-    title: "Map Drop",
-    short: "Drop a pin where you think the city is.",
-    description:
-      "Five cities, one quiet stone map. Drop your pin, watch the distance unfold, and learn how far your inner compass drifts.",
-    minutes: "~3 min",
-    difficulty: "Medium",
-    type: "Geography",
-    accent: "teal",
-    howTo: [
-      "A city name appears. Click the map (or use arrow keys + Enter) to drop your pin.",
-      "The closer your pin, the more of the 100 points you keep.",
-      "Five cities per round. 450+ total is a perfect day.",
-    ],
-  },
-  {
     id: "globe-hunt",
     title: "Globe Hunt",
     short: "Name the country from a trail of clues.",
@@ -163,6 +204,23 @@ export const GAMES: GameMeta[] = [
       "The left card shows its value. The challenger on the right hides one.",
       "Guess whether the challenger's value is higher or lower.",
       "After each reveal, the challenger becomes the new anchor. Ten links per day.",
+    ],
+  },
+  {
+    id: "trivia",
+    title: "Trivia",
+    short: "Ten questions from a vault of more than ten thousand, across nine topics.",
+    description:
+      "The arcade's deepest vault: over ten thousand questions spanning geography, history, science, nature, arts, food, words, sport, and numbers. Ten surface each round — answer them quietly and see how your lantern burns.",
+    minutes: "~4 min",
+    difficulty: "Medium",
+    type: "Trivia",
+    accent: "gold",
+    howTo: [
+      "Read each question and pick one of the answers.",
+      "Correct picks glow sage; misses show the true answer.",
+      "Ten questions per round, one point each — topics always vary.",
+      "The daily round is the same for everyone; free play draws fresh questions.",
     ],
   },
 ];

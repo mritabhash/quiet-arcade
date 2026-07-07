@@ -1,14 +1,17 @@
 export type GameId =
+  | "map-drop"
+  | "time-capsule"
+  | "borderline"
   | "word-grid"
   | "pattern-groups"
   | "mini-crossword"
   | "hidden-strands"
   | "letter-hive"
-  | "map-drop"
   | "globe-hunt"
   | "country-shape"
   | "time-lens"
-  | "higher-lower";
+  | "higher-lower"
+  | "trivia";
 
 export type Mode = "daily" | "practice";
 
@@ -24,6 +27,10 @@ export interface GameMeta {
   type: "Words" | "Logic" | "Geography" | "Trivia" | "Memory" | "Comparison";
   accent: Accent;
   howTo: string[];
+  /** flagship games get a large puzzle database, free-play mode, and share results */
+  flagship?: boolean;
+  /** CTA label shown after the daily is done, e.g. "Play another Map Drop" */
+  freePlayLabel?: string;
 }
 
 export interface GameResult {
@@ -31,6 +38,8 @@ export interface GameResult {
   max: number;
   perfect: boolean;
   label?: string;
+  /** shareable result lines (flagship games); the shell appends the streak */
+  share?: string[];
 }
 
 export interface GameApi {
@@ -75,6 +84,23 @@ export interface DailyEntry {
 }
 
 export type DailyCompletions = Record<string, Partial<Record<GameId, DailyEntry>>>;
+
+/** Separate daily / free-play tracking for the flagship games. */
+export interface FlagshipGameStats {
+  dailyPlays: number;
+  freePlays: number;
+  wins: number;
+  bestDaily: number;
+  bestDailyMax: number;
+  bestFree: number;
+  bestFreeMax: number;
+  freeScoreSum: number;
+  perfectDailies: number;
+  hintsUsed: number;
+  recentPuzzles: string[];
+}
+
+export type FlagshipStats = Partial<Record<GameId, FlagshipGameStats>>;
 
 export interface ReportedItem {
   gameId: GameId;

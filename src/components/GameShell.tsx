@@ -12,6 +12,7 @@ import {
   loadStats,
   effectiveStreak,
 } from "../lib/storage";
+import { copyShareText } from "../lib/flagship";
 import { useSettings } from "../context/SettingsContext";
 import { Button, Chip } from "./ui";
 import { Counter, LineConfetti, EASE } from "./motion";
@@ -39,6 +40,7 @@ export function GameShell({
     result: null,
   });
   const [reported, setReported] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [howToOpen, setHowToOpen] = useState(settings.showExplanations);
 
   const { mode, runId, result } = state;
@@ -78,15 +80,31 @@ export function GameShell({
 
   const switchMode = (m: Mode) => {
     if (m === mode) return;
+    setCopied(false);
     setState({ mode: m, runId: runId + 1, result: null });
   };
 
-  const playAgain = () => setState((s) => ({ ...s, runId: s.runId + 1, result: null }));
+  const playAgain = () => {
+    setCopied(false);
+    setState((s) => ({ ...s, runId: s.runId + 1, result: null }));
+  };
+
+  const shareResult = async () => {
+    if (!result?.share) return;
+    const lines = [...result.share];
+    if (mode === "daily") {
+      lines.push(`Streak: ${effectiveStreak(loadStats())} days`);
+    }
+    if (await copyShareText(lines.join("\n"))) setCopied(true);
+  };
 
   const dailyLocked = mode === "daily" && !!alreadyDone && !result;
 
+  // map games get a wider shell so the world map has room to breathe
+  const wide = meta.id === "map-drop" || meta.id === "time-capsule";
+
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-20 sm:px-6">
+    <div className={`mx-auto ${wide ? "max-w-6xl" : "max-w-3xl"} px-4 pb-20 sm:px-6`}>
       <div className="flex flex-wrap items-center justify-between gap-4 pt-8">
         <div className="flex items-center gap-4">
           <div className="h-14 w-14 rounded-2xl qa-card p-2">
@@ -117,7 +135,9 @@ export function GameShell({
                   transition={{ duration: 0.3, ease: EASE }}
                 />
               )}
-              <span className="relative">{m}</span>
+              <span className="relative">
+                {meta.flagship && m === "practice" ? "free play" : m}
+              </span>
             </button>
           ))}
         </div>
@@ -219,15 +239,24 @@ export function GameShell({
                 )}
                 <div className="mt-7 flex flex-wrap justify-center gap-3">
                   {mode === "practice" ? (
-                    <Button onClick={playAgain}>Play again</Button>
+                    <Button onClick={playAgain}>
+                      {meta.flagship ? (meta.freePlayLabel ?? "Play again") : "Play again"}
+                    </Button>
                   ) : (
-                    <Button onClick={() => switchMode("practice")}>Keep playing (practice)</Button>
+                    <Button onClick={() => switchMode("practice")}>
+                      {meta.freePlayLabel ?? "Keep playing (practice)"}
+                    </Button>
+                  )}
+                  {result.share && (
+                    <Button variant="secondary" onClick={shareResult}>
+                      {copied ? "Copied ✦" : "Share result"}
+                    </Button>
                   )}
                   <Link to="/stats">
                     <Button variant="secondary">View stats</Button>
                   </Link>
                   <Link to="/games">
-                    <Button variant="ghost">All games</Button>
+                    <Button variant="ghost">{meta.flagship ? "Back to Daily Games" : "All games"}</Button>
                   </Link>
                 </div>
                 <button
@@ -288,9 +317,9 @@ function DailyDonePanel({
         {streak > 0 && <Chip>🔥 {streak}-day streak</Chip>}
       </div>
       <div className="mt-7 flex flex-wrap justify-center gap-3">
-        <Button onClick={onPractice}>Play practice round</Button>
+        <Button onClick={onPractice}>{meta.freePlayLabel ?? "Play practice round"}</Button>
         <Link to="/games">
-          <Button variant="secondary">All games</Button>
+          <Button variant="secondary">{meta.flagship ? "Back to Daily Games" : "All games"}</Button>
         </Link>
       </div>
     </motion.div>
