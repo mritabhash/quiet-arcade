@@ -148,13 +148,6 @@ function MythicalMap() {
           </g>
         ))}
 
-        {/* cartouche */}
-        <g>
-          <rect x={286} y={54} width={330} height={40} rx={7} className="fill-sand-50/80 stroke-gold-600/60 dark:fill-pine-800/80" strokeWidth={1.5} />
-          <text x={451} y={80} textAnchor="middle" className="fill-[var(--ink)] font-display" fontSize={17} fontWeight={600} letterSpacing={1.5}>
-            Everything&apos;s Gonna Happen Again
-          </text>
-        </g>
       </svg>
     </div>
   );
@@ -175,6 +168,10 @@ export function LorePage() {
       <div className="mt-8">
         <MythicalMap />
       </div>
+
+      <p className="mt-6 text-center font-display text-lg italic text-[var(--ink)]/80">
+        The story of Arcanum will be told
+      </p>
     </div>
   );
 }
