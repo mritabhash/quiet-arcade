@@ -9,10 +9,17 @@ import { WorldMap, toXY } from "../components/WorldMap";
 import { Button, Chip } from "../components/ui";
 import { Counter, EASE } from "../components/motion";
 import { RabbitGuide, type RabbitMood } from "../components/RabbitGuide";
+import { easyHintsFor } from "../lib/easyMode";
 
 /** Score ceiling by hints used — index is (hintsUsed - 3). */
 const HINT_POINTS = [5000, 4200, 3400, 2500, 1500] as const;
 const MAX_SCORE = 5000;
+/** Easy mode: 3 country hints, ceiling by hints revealed — index is (revealed - 1). */
+const EASY_HINT_POINTS = [4000, 3000, 2000] as const;
+const EASY_MAX_SCORE = 4000;
+const EASY_LABELS = ["Flag colours", "In the local tongue", "Country fact"] as const;
+const DIFFICULTY_KEY = "quietArcade.mapDropDifficulty";
+type Difficulty = "standard" | "easy";
 /** Full points inside this radius; score fades to zero at FADE_KM. */
 const BULLSEYE_KM = 25;
 const FADE_KM = 1500;
@@ -61,7 +68,18 @@ export function MapDropGame({ api }: { api: GameApi }) {
     return MAP_DROP_PUZZLES[pickFreshIndex("map-drop", ids, rng)];
   }, [api.seed, api.mode]);
 
-  const [revealed, setRevealed] = useState(3);
+  const easyHints = useMemo(() => easyHintsFor(place, api.seed), [place, api.seed]);
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => {
+    try {
+      return localStorage.getItem(DIFFICULTY_KEY) === "easy" ? "easy" : "standard";
+    } catch {
+      return "standard";
+    }
+  });
+  // unmapped country → fall back to the standard 7-hint flow for the round
+  const easy = difficulty === "easy" && easyHints !== null;
+
+  const [revealed, setRevealed] = useState(easy ? 1 : 3);
   const [pin, setPin] = useState<{ x: number; y: number } | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [rabbit, setRabbit] = useState<{ mood: RabbitMood; line: string }>(() => ({
@@ -85,14 +103,37 @@ export function MapDropGame({ api }: { api: GameApi }) {
     return () => clearTimeout(t);
   }, [poke, outcome]);
 
-  const ceiling = HINT_POINTS[revealed - 3];
+  useEffect(() => {
+    if (difficulty === "easy" && !easyHints && import.meta.env.DEV) {
+      console.warn(
+        `Map Drop easy mode: no country data for ${place.name} (${place.country}); standard hints used.`,
+      );
+    }
+  }, [difficulty, easyHints, place]);
+
+  const totalHints = easy ? 3 : 7;
+  const hints = easy && easyHints ? easyHints : place.hints;
+  const ceiling = easy ? EASY_HINT_POINTS[revealed - 1] : HINT_POINTS[revealed - 3];
+  const maxScore = easy ? EASY_MAX_SCORE : MAX_SCORE;
+
+  const switchDifficulty = (d: Difficulty) => {
+    if (d === difficulty || outcome) return;
+    setDifficulty(d);
+    try {
+      localStorage.setItem(DIFFICULTY_KEY, d);
+    } catch {
+      /* storage unavailable — the choice just won't persist */
+    }
+    setRevealed(d === "easy" && easyHints ? 1 : 3);
+    bump();
+  };
 
   const revealHint = () => {
-    if (revealed >= 7 || outcome) return;
+    if (revealed >= totalHints || outcome) return;
     const n = revealed + 1;
     setRevealed(n);
     beforeTempt.current = null;
-    say("investigating", n === 7 ? LINES.lastHint : LINES.reveal);
+    say("investigating", n === totalHints ? LINES.lastHint : LINES.reveal);
     bump();
   };
 
@@ -125,7 +166,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
       base: ceiling,
       score,
     });
-    if (score === MAX_SCORE || dist <= 100) say("celebrate", LINES.celebrate);
+    if (score === maxScore || dist <= 100) say("celebrate", LINES.celebrate);
     else if (dist <= 600) say("happy", LINES.happy);
     else if (dist <= 2500) say("squint", LINES.squint);
     else say("shocked", LINES.shocked);
@@ -135,22 +176,23 @@ export function MapDropGame({ api }: { api: GameApi }) {
     if (!outcome) return;
     recordFlagshipRound("map-drop", api.mode, {
       score: outcome.score,
-      max: MAX_SCORE,
+      max: maxScore,
       won: outcome.dist <= 600,
-      perfect: outcome.score === MAX_SCORE,
+      perfect: outcome.score === maxScore,
       hintsUsed: revealed,
       puzzleId: place.id,
     });
     api.finish({
       score: outcome.score,
-      max: MAX_SCORE,
-      perfect: outcome.score === MAX_SCORE,
-      label: `${place.name}, ${place.country} — ${revealed}/7 hints, ${outcome.dist.toLocaleString()} km off.`,
+      max: maxScore,
+      perfect: outcome.score === maxScore,
+      label: `${place.name}, ${place.country} — ${easy ? "Easy, " : ""}${revealed}/${totalHints} hints, ${outcome.dist.toLocaleString()} km off.`,
       share: [
         "Quiet Arcade: Map Drop",
-        `Score: ${outcome.score.toLocaleString()}/${MAX_SCORE.toLocaleString()}`,
+        `Score: ${outcome.score.toLocaleString()}/${maxScore.toLocaleString()}`,
+        ...(easy ? ["Difficulty: Easy"] : []),
         `Distance: ${outcome.dist.toLocaleString()} km`,
-        `Hints used: ${revealed}/7`,
+        `Hints used: ${revealed}/${totalHints}`,
         `Mode: ${api.mode === "daily" ? "Daily" : "Free Play"}`,
       ],
     });
@@ -171,7 +213,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
           </div>
           <p className="font-display text-3xl font-semibold">
             <Counter value={outcome.score} />
-            <span className="text-base font-normal qa-muted"> / {MAX_SCORE.toLocaleString()}</span>
+            <span className="text-base font-normal qa-muted"> / {maxScore.toLocaleString()}</span>
           </p>
         </div>
 
@@ -184,7 +226,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Your pin" value={outcome.pinLabel} />
           <Stat label="Distance" value={`${outcome.dist.toLocaleString()} km`} />
-          <Stat label="Hints used" value={`${revealed} / 7`} />
+          <Stat label="Hints used" value={`${revealed} / ${totalHints}`} />
           <Stat label="Ceiling" value={`${outcome.base.toLocaleString()} pts`} />
         </div>
 
@@ -214,35 +256,60 @@ export function MapDropGame({ api }: { api: GameApi }) {
           <p className="text-xs font-bold uppercase tracking-widest qa-muted">Hidden place</p>
           <h2 className="mt-1 font-display text-2xl font-semibold">Read hints. Drop pin.</h2>
         </div>
-        <div className="text-right">
-          <p className="font-display text-2xl font-semibold">
-            {ceiling.toLocaleString()}
-            <span className="text-sm font-normal qa-muted"> pts possible</span>
-          </p>
-          <p className="text-xs qa-muted">{revealed} / 7 hints</p>
+        <div className="flex items-center gap-3">
+          <div
+            className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1"
+            role="tablist"
+            aria-label="Hint difficulty"
+          >
+            {(["standard", "easy"] as const).map((d) => (
+              <button
+                key={d}
+                role="tab"
+                aria-selected={difficulty === d}
+                onClick={() => switchDifficulty(d)}
+                className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
+                  difficulty === d
+                    ? "bg-[var(--card-2)] text-[var(--ink)]"
+                    : "qa-muted hover:text-[var(--ink)]"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+          <div className="text-right">
+            <p className="font-display text-2xl font-semibold">
+              {ceiling.toLocaleString()}
+              <span className="text-sm font-normal qa-muted"> pts possible</span>
+            </p>
+            <p className="text-xs qa-muted">
+              {revealed} / {totalHints} hints
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)]">
         <div className="flex flex-col gap-2.5">
           <div className="flex flex-col gap-2.5" aria-live="polite">
-            {place.hints.slice(0, revealed).map((hint, i) => (
+            {hints.slice(0, revealed).map((hint, i) => (
               <motion.div
-                key={i}
+                key={`${difficulty}-${i}`}
                 initial={{ opacity: 0, x: -18, filter: "blur(6px)" }}
                 animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                transition={{ duration: 0.5, ease: EASE, delay: i < 3 ? i * 0.15 : 0 }}
+                transition={{ duration: 0.5, ease: EASE, delay: i < (easy ? 1 : 3) ? i * 0.15 : 0 }}
                 className="qa-card rounded-2xl px-4 py-3"
               >
                 <p className="text-[10px] font-bold uppercase tracking-widest qa-muted">
-                  Hint {i + 1}
+                  {easy ? EASY_LABELS[i] : `Hint ${i + 1}`}
                 </p>
                 <p className="mt-0.5 text-sm font-medium leading-snug">{hint}</p>
               </motion.div>
             ))}
           </div>
 
-          {revealed < 7 ? (
+          {revealed < totalHints ? (
             <button
               onClick={revealHint}
               onMouseEnter={onTemptEnter}
@@ -253,11 +320,12 @@ export function MapDropGame({ api }: { api: GameApi }) {
             >
               <p className="text-sm font-semibold">Reveal hint {revealed + 1}</p>
               <p className="text-xs qa-muted">
-                Lowers your ceiling to {HINT_POINTS[revealed - 2].toLocaleString()} pts
+                Lowers your ceiling to{" "}
+                {(easy ? EASY_HINT_POINTS[revealed] : HINT_POINTS[revealed - 2]).toLocaleString()} pts
               </p>
             </button>
           ) : (
-            <Chip className="self-start">All seven hints are out</Chip>
+            <Chip className="self-start">All {easy ? "three" : "seven"} hints are out</Chip>
           )}
 
           <div className="mt-auto pt-3">
