@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useSettings } from "../context/SettingsContext";
+import { read, write } from "../lib/storage";
 
 /**
  * The knight's vigil — the ambient character band on the home page.
@@ -69,44 +70,20 @@ function pickActivity(recent: KnightActivity[]): KnightActivity {
 
 function loadKnight(): KnightState {
   const now = Date.now();
-  try {
-    const raw = localStorage.getItem(KNIGHT_KEY);
-    if (raw) {
-      const s = JSON.parse(raw) as KnightState;
-      if (
-        s &&
-        ACTIVITIES.includes(s.activity) &&
-        typeof s.nextChangeAt === "number" &&
-        now < s.nextChangeAt
-      ) {
-        return s;
-      }
-      // time's up — move her on, remembering where she's been
-      const recent = s && Array.isArray(s.recent) ? s.recent : [];
-      const activity = pickActivity([s?.activity, ...recent].filter(Boolean) as KnightActivity[]);
-      const fresh: KnightState = {
-        activity,
-        startedAt: now,
-        nextChangeAt: now + nextDuration(),
-        recent: [s?.activity, ...recent].filter(Boolean).slice(0, 2) as KnightActivity[],
-      };
-      localStorage.setItem(KNIGHT_KEY, JSON.stringify(fresh));
-      return fresh;
-    }
-  } catch {
-    /* fall through to a fresh state */
+  const s = read<KnightState | null>(KNIGHT_KEY, null);
+  if (s && ACTIVITIES.includes(s.activity) && typeof s.nextChangeAt === "number" && now < s.nextChangeAt) {
+    return s;
   }
+  // nothing saved, or time's up — move her on, remembering where she's been
+  const recent = s && Array.isArray(s.recent) ? s.recent : [];
+  const activity = pickActivity([s?.activity, ...recent].filter(Boolean) as KnightActivity[]);
   const fresh: KnightState = {
-    activity: pickActivity([]),
+    activity,
     startedAt: now,
     nextChangeAt: now + nextDuration(),
-    recent: [],
+    recent: [s?.activity, ...recent].filter(Boolean).slice(0, 2) as KnightActivity[],
   };
-  try {
-    localStorage.setItem(KNIGHT_KEY, JSON.stringify(fresh));
-  } catch {
-    /* private mode */
-  }
+  write(KNIGHT_KEY, fresh);
   return fresh;
 }
 
