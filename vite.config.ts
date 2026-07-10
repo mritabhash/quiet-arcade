@@ -6,4 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: '/quiet-arcade/',
+  server: {
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
+  },
 })

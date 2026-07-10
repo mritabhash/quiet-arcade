@@ -10,6 +10,7 @@ import { Button, Chip } from "../components/ui";
 import { Counter, EASE } from "../components/motion";
 import { RabbitGuide, type RabbitMood } from "../components/RabbitGuide";
 import { easyHintsFor } from "../lib/easyMode";
+import { read, write } from "../lib/storage";
 
 /** Score ceiling by hints used — index is (hintsUsed - 3). */
 const HINT_POINTS = [5000, 4200, 3400, 2500, 1500] as const;
@@ -69,13 +70,9 @@ export function MapDropGame({ api }: { api: GameApi }) {
   }, [api.seed, api.mode]);
 
   const easyHints = useMemo(() => easyHintsFor(place, api.seed), [place, api.seed]);
-  const [difficulty, setDifficulty] = useState<Difficulty>(() => {
-    try {
-      return localStorage.getItem(DIFFICULTY_KEY) === "easy" ? "easy" : "standard";
-    } catch {
-      return "standard";
-    }
-  });
+  const [difficulty, setDifficulty] = useState<Difficulty>(() =>
+    read<Difficulty>(DIFFICULTY_KEY, "easy"),
+  );
   // unmapped country → fall back to the standard 7-hint flow for the round
   const easy = difficulty === "easy" && easyHints !== null;
 
@@ -119,11 +116,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
   const switchDifficulty = (d: Difficulty) => {
     if (d === difficulty || outcome) return;
     setDifficulty(d);
-    try {
-      localStorage.setItem(DIFFICULTY_KEY, d);
-    } catch {
-      /* storage unavailable — the choice just won't persist */
-    }
+    write(DIFFICULTY_KEY, d);
     setRevealed(d === "easy" && easyHints ? 1 : 3);
     bump();
   };
@@ -262,7 +255,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
             role="tablist"
             aria-label="Hint difficulty"
           >
-            {(["standard", "easy"] as const).map((d) => (
+            {(["easy", "standard"] as const).map((d) => (
               <button
                 key={d}
                 role="tab"
@@ -274,7 +267,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
                     : "qa-muted hover:text-[var(--ink)]"
                 }`}
               >
-                {d}
+                {d === "standard" ? "difficult" : d}
               </button>
             ))}
           </div>

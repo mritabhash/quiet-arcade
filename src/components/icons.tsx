@@ -357,6 +357,57 @@ function TriviaIcon() {
   );
 }
 
+function OddOneOutIcon() {
+  return (
+    <svg viewBox="0 0 48 48" className="h-full w-full" aria-hidden>
+      {[0, 1, 2].map((r) =>
+        [0, 1, 2].map((c) => {
+          const odd = r === 1 && c === 2;
+          return (
+            <rect
+              key={`${r}${c}`}
+              x={7 + c * 12}
+              y={7 + r * 12}
+              width={10}
+              height={10}
+              rx={3}
+              fill={odd ? "#bc6140" : "var(--card-2)"}
+              stroke={odd ? "#7c3a24" : "var(--line)"}
+              strokeWidth={1.4}
+            />
+          );
+        }),
+      )}
+      <circle cx={40} cy={40} r={2} fill="#d19e34" />
+    </svg>
+  );
+}
+
+function CatPairsIcon() {
+  return (
+    <svg viewBox="0 0 48 48" className="h-full w-full" aria-hidden>
+      {/* face-down card with a paw print */}
+      <g transform="rotate(-7 15 24)">
+        <rect x={6} y={12} width={18} height={24} rx={4} className="fill-sand-200 dark:fill-pine-800" stroke="#bc6140" strokeWidth={1.6} />
+        <ellipse cx={15} cy={26} rx={2.7} ry={2.2} fill="#c98d5f" />
+        <circle cx={11.4} cy={22.4} r={1.15} fill="#c98d5f" />
+        <circle cx={15} cy={21.3} r={1.15} fill="#c98d5f" />
+        <circle cx={18.6} cy={22.4} r={1.15} fill="#c98d5f" />
+      </g>
+      {/* face-up card with a dozing cat */}
+      <g transform="rotate(6 33 24)">
+        <rect x={24} y={11} width={18} height={24} rx={4} className="fill-sand-200 dark:fill-pine-800" stroke="#37837b" strokeWidth={1.8} />
+        <path d="M27.5 22 L26.5 16.5 L31 19 Z" fill="#cf7a54" stroke="#7c3a24" strokeWidth={1} strokeLinejoin="round" />
+        <path d="M38.5 22 L39.5 16.5 L35 19 Z" fill="#cf7a54" stroke="#7c3a24" strokeWidth={1} strokeLinejoin="round" />
+        <ellipse cx={33} cy={25.5} rx={6.5} ry={6} fill="#cf7a54" stroke="#7c3a24" strokeWidth={1.2} />
+        <path d="M29.8 25 q1 1.1 2 0 M34.2 25 q1 1.1 2 0" fill="none" stroke="#7c3a24" strokeWidth={1.1} strokeLinecap="round" />
+        <path d="M32.4 28 h1.2 l-.6 1 Z" fill="#7c3a24" />
+      </g>
+      <circle cx={24} cy={41} r={1.4} fill="#d19e34" />
+    </svg>
+  );
+}
+
 export function GameIcon({ id }: { id: GameId }) {
   switch (id) {
     case "time-capsule":
@@ -385,5 +436,9 @@ export function GameIcon({ id }: { id: GameId }) {
       return <HigherLowerIcon />;
     case "trivia":
       return <TriviaIcon />;
+    case "cat-pairs":
+      return <CatPairsIcon />;
+    case "odd-one-out":
+      return <OddOneOutIcon />;
   }
 }

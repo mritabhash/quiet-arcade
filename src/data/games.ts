@@ -223,6 +223,39 @@ export const GAMES: GameMeta[] = [
       "The daily round is the same for everyone; free play draws fresh questions.",
     ],
   },
+  {
+    id: "cat-pairs",
+    title: "Tile Pairs",
+    short: "Flip the cards and match six tiles from a library of ten thousand.",
+    description:
+      "Twelve face-down cards, six matching pairs beneath — drawn nightly from a library of over ten thousand tiles: desert creatures, charms, and curios. Trust your memory of the sand; every reunion earns one small compliment, free of charge.",
+    minutes: "~3 min",
+    difficulty: "Gentle",
+    type: "Memory",
+    accent: "clay",
+    howTo: [
+      "Flip two cards at a time to look for matching tiles.",
+      "Matched pairs stay face up; mismatches quietly turn back over.",
+      "Fewer moves means a higher score — nine moves or fewer is a perfect round.",
+      "Every match comes with one small compliment, free of charge.",
+    ],
+  },
+  {
+    id: "odd-one-out",
+    title: "Odd Tile Out",
+    short: "Nine tiles, one quiet impostor. Spot it.",
+    description:
+      "Nine tiles surface from the arcade's library of ten thousand — eight identical, one subtly wrong. A different charm, a missing stripe, a shifted hue. Eight rounds of gentle suspicion.",
+    minutes: "~3 min",
+    difficulty: "Gentle",
+    type: "Logic",
+    accent: "teal",
+    howTo: [
+      "Study the nine tiles — eight are identical, one differs.",
+      "The difference is small: a charm, a pattern, a hue, or an aura.",
+      "Click the odd tile. Eight tile sets per day, one point each.",
+    ],
+  },
 ];
 
 export const GAME_INDEX = Object.fromEntries(GAMES.map((g) => [g.id, g])) as Record<

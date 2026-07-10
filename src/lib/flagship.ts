@@ -1,5 +1,6 @@
 import type { FlagshipGameStats, FlagshipStats, GameId, Mode } from "../types";
 import type { Rng } from "./random";
+import { read, write } from "./storage";
 
 /**
  * Flagship-game plumbing: separate daily / free-play stat tracking,
@@ -27,12 +28,7 @@ const EMPTY: FlagshipGameStats = {
 };
 
 export function loadFlagshipStats(): FlagshipStats {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as FlagshipStats) : {};
-  } catch {
-    return {};
-  }
+  return read<FlagshipStats>(KEY, {});
 }
 
 export function flagshipStatsFor(gameId: GameId): FlagshipGameStats {
@@ -40,11 +36,7 @@ export function flagshipStatsFor(gameId: GameId): FlagshipGameStats {
 }
 
 function save(all: FlagshipStats): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(all));
-  } catch {
-    /* private mode: stats simply stay in-memory for the session */
-  }
+  write(KEY, all);
 }
 
 export function recordFlagshipRound(

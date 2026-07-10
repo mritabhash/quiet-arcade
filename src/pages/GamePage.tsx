@@ -17,6 +17,8 @@ import { CountryShapeGame } from "../games/CountryShape";
 import { TimeLensGame } from "../games/TimeLens";
 import { HigherLowerGame } from "../games/HigherLower";
 import { TriviaGame } from "../games/Trivia";
+import { CatPairsGame } from "../games/CatPairs";
+import { OddOneOutGame } from "../games/OddOneOut";
 
 const COMPONENTS: Record<GameId, (props: { api: GameApi }) => React.ReactNode> = {
   "word-grid": WordGridGame,
@@ -32,6 +34,8 @@ const COMPONENTS: Record<GameId, (props: { api: GameApi }) => React.ReactNode> =
   "time-lens": TimeLensGame,
   "higher-lower": HigherLowerGame,
   "trivia": TriviaGame,
+  "cat-pairs": CatPairsGame,
+  "odd-one-out": OddOneOutGame,
 };
 
 export function GamePage() {

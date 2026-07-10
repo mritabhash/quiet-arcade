@@ -11,7 +11,9 @@ export type GameId =
   | "country-shape"
   | "time-lens"
   | "higher-lower"
-  | "trivia";
+  | "trivia"
+  | "cat-pairs"
+  | "odd-one-out";
 
 export type Mode = "daily" | "practice";
 

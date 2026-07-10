@@ -18,7 +18,7 @@ export function GamesPage() {
       <BlurReveal>
         <h1 className="font-display text-4xl font-semibold">The games</h1>
         <p className="mt-2 max-w-lg qa-muted">
-          Thirteen quiet rooms in one arcade. Each has a daily puzzle and endless free play.
+          Fifteen quiet rooms in one arcade. Each has a daily puzzle and endless free play.
         </p>
       </BlurReveal>
 

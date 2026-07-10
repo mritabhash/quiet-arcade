@@ -101,15 +101,15 @@ function MythicalMap() {
           strokeLinecap="round"
         />
 
-        {/* the hall of thirteen doors */}
+        {/* the hall of fifteen doors */}
         <g>
           <path d="M420 268 L420 236 L452 208 L484 236 L484 268 Z" className="fill-clay-500" />
           <path d="M438 268 L438 244 Q438 230 452 226 Q466 230 466 244 L466 268 Z" className="fill-teal-600" />
           <rect x={447} y={206} width={10} height={10} transform="rotate(45 452 211)" className="fill-gold-500" />
           <rect x={414} y={268} width={76} height={5} className="fill-pine-800 dark:fill-sand-300" />
         </g>
-        {Array.from({ length: 13 }, (_, i) => {
-          const a = (i / 13) * Math.PI * 2 - Math.PI / 2;
+        {Array.from({ length: 15 }, (_, i) => {
+          const a = (i / 15) * Math.PI * 2 - Math.PI / 2;
           return (
             <circle
               key={i}
@@ -120,7 +120,7 @@ function MythicalMap() {
             />
           );
         })}
-        <text x={452} y={302} textAnchor="middle" className="fill-[var(--ink)] font-display" fontSize={15} fontWeight={600}>the hall of thirteen doors</text>
+        <text x={452} y={302} textAnchor="middle" className="fill-[var(--ink)] font-display" fontSize={15} fontWeight={600}>the hall of fifteen doors</text>
 
         {/* wandering routes */}
         <path d="M452 306 Q380 350 310 396 M452 306 Q540 350 616 382 M484 240 Q520 190 560 160 M420 240 Q340 220 268 216" fill="none" className="stroke-clay-600/50" strokeWidth={1.5} strokeDasharray="3 6" strokeLinecap="round" />

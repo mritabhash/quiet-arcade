@@ -117,29 +117,40 @@ export function GameShell({
             </p>
           </div>
         </div>
-        <div className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1" role="tablist" aria-label="Game mode">
-          {(["daily", "practice"] as const).map((m) => (
-            <button
-              key={m}
-              role="tab"
-              aria-selected={mode === m}
-              onClick={() => switchMode(m)}
-              className={`relative rounded-lg px-4 py-1.5 text-sm font-semibold capitalize transition-colors ${
-                mode === m ? "text-sand-50" : "qa-muted hover:text-[var(--ink)]"
-              }`}
-            >
-              {mode === m && (
-                <motion.span
-                  layoutId={`mode-pill-${meta.id}`}
-                  className="absolute inset-0 rounded-lg bg-teal-600"
-                  transition={{ duration: 0.3, ease: EASE }}
-                />
-              )}
-              <span className="relative">
-                {meta.flagship && m === "practice" ? "free play" : m}
-              </span>
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          {mode === "practice" && !result && (
+            <Button variant="secondary" className="px-4 py-1.5 text-sm" onClick={playAgain}>
+              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M13.5 8a5.5 5.5 0 1 1-1.61-3.89" />
+                <path d="M13.5 1.5v3h-3" />
+              </svg>
+              Play again
+            </Button>
+          )}
+          <div className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1" role="tablist" aria-label="Game mode">
+            {(["daily", "practice"] as const).map((m) => (
+              <button
+                key={m}
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => switchMode(m)}
+                className={`relative rounded-lg px-4 py-1.5 text-sm font-semibold capitalize transition-colors ${
+                  mode === m ? "text-sand-50" : "qa-muted hover:text-[var(--ink)]"
+                }`}
+              >
+                {mode === m && (
+                  <motion.span
+                    layoutId={`mode-pill-${meta.id}`}
+                    className="absolute inset-0 rounded-lg bg-teal-600"
+                    transition={{ duration: 0.3, ease: EASE }}
+                  />
+                )}
+                <span className="relative">
+                  {meta.flagship && m === "practice" ? "free play" : m}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -42,7 +42,7 @@ export function HomePage() {
             </BlurReveal>
             <BlurReveal delay={0.24}>
               <p className="mt-5 max-w-md text-xl leading-relaxed text-pine-800/90 dark:text-sand-100/85">
-                Thirteen small rites of word, map, and memory. A fresh puzzle is inscribed each
+                Fifteen small rites of word, map, and memory. A fresh puzzle is inscribed each
                 midnight — played in hush, kept in your browser, owed to no one.
               </p>
             </BlurReveal>
@@ -84,7 +84,7 @@ export function HomePage() {
       <section aria-label="Your ledger" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {[
-            { big: <Counter value={doneCount} suffix=" / 12" />, small: "sigils sealed today" },
+            { big: <Counter value={doneCount} suffix={` / ${GAMES.length}`} />, small: "sigils sealed today" },
             { big: <Counter value={streak} />, small: "day streak — one seal keeps the flame" },
             { big: <Counter value={stats.totalPlays} />, small: "rounds etched all time" },
           ].map((item, i) => (
@@ -101,7 +101,7 @@ export function HomePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <BlurReveal>
             <p className="text-xs font-semibold uppercase tracking-[0.32em] text-teal-600 dark:text-teal-300">
-              the thirteen chambers
+              the fifteen chambers
             </p>
             <h2 className="mt-2 font-display text-5xl font-semibold sm:text-6xl">Choose a door</h2>
           </BlurReveal>
