@@ -21,6 +21,23 @@ export const GAMES: GameMeta[] = [
     ],
   },
   {
+    id: "trivia",
+    title: "Trivia",
+    short: "Fifteen questions, nine topics, three moods — from a vault of ninety thousand.",
+    description:
+      "The arcade's deepest vault: around ninety thousand questions across history, geography, flags, countries, movies & TV, pop culture, tech, science, and the cosmos. Pick a topic or mix them, choose easy, moderate, or hard, pack a lifeline or three, and let the points pile up.",
+    minutes: "~5 min",
+    difficulty: "Medium",
+    type: "Trivia",
+    accent: "gold",
+    howTo: [
+      "Pick a topic (or Misc for a blend), a mode, and your lifelines — easy packs 1, moderate 2, hard 3.",
+      "Fifteen questions, four options each. Later questions are worth more, and a streak of three or more adds bonus points.",
+      "Lifelines, once per round: 50-50 clears two wrong options, Plus One grants a second guess, Topic Swap trades the question, Host Hint drops a clue.",
+      "Misses never subtract points. The daily round is the same for everyone with your setup; free play draws fresh questions.",
+    ],
+  },
+  {
     id: "time-capsule",
     title: "Time Capsule",
     short: "Study a mysterious scene and guess where and when it belongs.",
@@ -204,23 +221,6 @@ export const GAMES: GameMeta[] = [
       "The left card shows its value. The challenger on the right hides one.",
       "Guess whether the challenger's value is higher or lower.",
       "After each reveal, the challenger becomes the new anchor. Ten links per day.",
-    ],
-  },
-  {
-    id: "trivia",
-    title: "Trivia",
-    short: "Fifteen questions, nine topics, three moods — from a vault of ninety thousand.",
-    description:
-      "The arcade's deepest vault: around ninety thousand questions across history, geography, flags, countries, movies & TV, pop culture, tech, science, and the cosmos. Pick a topic or mix them, choose easy, moderate, or hard, pack a lifeline or three, and let the points pile up.",
-    minutes: "~5 min",
-    difficulty: "Medium",
-    type: "Trivia",
-    accent: "gold",
-    howTo: [
-      "Pick a topic (or Misc for a blend), a mode, and your lifelines — easy packs 1, moderate 2, hard 3.",
-      "Fifteen questions, four options each. Later questions are worth more, and a streak of three or more adds bonus points.",
-      "Lifelines, once per round: 50-50 clears two wrong options, Plus One grants a second guess, Topic Swap trades the question, Host Hint drops a clue.",
-      "Misses never subtract points. The daily round is the same for everyone with your setup; free play draws fresh questions.",
     ],
   },
   {
