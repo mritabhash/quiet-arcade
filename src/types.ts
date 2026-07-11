@@ -50,6 +50,8 @@ export interface GameApi {
   dateKey: string;
   showExplanations: boolean;
   finish: (result: GameResult) => void;
+  /** reset the shell for a fresh round immediately (practice flows) */
+  playAgain?: () => void;
 }
 
 export interface Settings {

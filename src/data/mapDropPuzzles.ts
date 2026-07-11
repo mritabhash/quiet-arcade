@@ -19,6 +19,8 @@ export interface MapDropPuzzle extends Place {
   region: string;
   climate: string;
   difficulty: MapDifficulty;
+  /** what the player is hunting: city, country, state, island, landmark, … */
+  kind: string;
 }
 
 /** metadata for the original places in ./places.ts */
@@ -50,8 +52,17 @@ const LEGACY: MapDropPuzzle[] = PLACES.map((p) => {
     "temperate",
     "Medium",
   ];
-  return { ...p, continent, region, climate, difficulty };
+  return { ...p, continent, region, climate, difficulty, kind: "city" };
 });
+
+/** curated entries that are not cities */
+const CURATED_KIND: Record<string, string> = {
+  petra: "landmark",
+  santorini: "island",
+  zanzibar: "island",
+  lofoten: "island",
+  cappadocia: "region",
+};
 
 function m(
   id: string,
@@ -66,7 +77,7 @@ function m(
   hints: [string, string, string, string, string, string, string],
   why: string,
 ): MapDropPuzzle {
-  return { id, name, country, continent, region, climate, difficulty, lat, lon, hints, why };
+  return { id, name, country, continent, region, climate, difficulty, lat, lon, hints, why, kind: CURATED_KIND[id] ?? "city" };
 }
 
 const NEW_PLACES: MapDropPuzzle[] = [

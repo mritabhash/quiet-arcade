@@ -73,6 +73,7 @@ export function CountryShapeGame({ api }: { api: GameApi }) {
               <path
                 key={i}
                 d={d}
+                fillRule="evenodd"
                 className="fill-clay-400 stroke-clay-700 dark:fill-clay-600 dark:stroke-clay-300"
                 strokeWidth={1}
                 strokeLinejoin="round"
@@ -106,7 +107,7 @@ export function CountryShapeGame({ api }: { api: GameApi }) {
         })}
       </div>
 
-      <p className="text-xs qa-muted">Silhouettes are gently stylised, like everything in this desert.</p>
+      <p className="text-xs qa-muted">Real map outlines, gently simplified. North is always up.</p>
     </div>
   );
 }

@@ -184,6 +184,7 @@ export function buildMapDrop(
       region: s.region,
       climate: s.temp >= 24 ? "hot" : s.temp >= 15 ? "warm" : s.temp >= 7 ? "temperate" : "cold",
       difficulty: difficultyFor(s),
+      kind: KIND_LABEL[s.kind] ?? "country",
       lat: s.lat,
       lon: s.lon,
       hints: [

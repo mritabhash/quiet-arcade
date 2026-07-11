@@ -9,24 +9,43 @@ import { WorldMap, toXY } from "../components/WorldMap";
 import { Button, Chip } from "../components/ui";
 import { Counter, EASE } from "../components/motion";
 import { RabbitGuide, type RabbitMood } from "../components/RabbitGuide";
-import { easyHintsFor } from "../lib/easyMode";
+import { easyHintsFor, easyFreeHintsFor } from "../lib/easyMode";
 import { read, write } from "../lib/storage";
 
-/** Score ceiling by hints used — index is (hintsUsed - 3). */
-const HINT_POINTS = [5000, 4200, 3400, 2500, 1500] as const;
+/** Hard mode: hints come one at a time — ceiling by hints revealed, index is (revealed - 1). */
+const HINT_POINTS = [5000, 4300, 3600, 2900, 2200, 1500, 800] as const;
 const MAX_SCORE = 5000;
-/** Easy mode: 3 country hints, ceiling by hints revealed — index is (revealed - 1). */
-const EASY_HINT_POINTS = [4000, 3000, 2000] as const;
-const EASY_MAX_SCORE = 4000;
-const EASY_LABELS = ["Flag colours", "In the local tongue", "Country fact"] as const;
+/** Moderate mode: the three country hints are free; three closer looks cost a flat fee each. */
+const MODERATE_MAX_SCORE = 4000;
+const MODERATE_HINT_COST = 600;
+const MODERATE_TOTAL_HINTS = 6;
+const MODERATE_LABELS = ["Flag colours", "In the local tongue", "Country fact"] as const;
+/** Easy mode: three famous facts are free; three closer looks cost a flat fee each. */
+const EASY_MAX_SCORE = 3000;
+const EASY_HINT_COST = 200;
+const EASY_TOTAL_HINTS = 6;
+/** Novice mode: the answer's name is free; one pricey reveal says where it sits. */
+const NOVICE_MAX_SCORE = 5000;
+const NOVICE_HINT_COST = 2000;
+const NOVICE_TOTAL_HINTS = 2;
 const DIFFICULTY_KEY = "quietArcade.mapDropDifficulty";
-type Difficulty = "standard" | "easy";
-/** Full points inside this radius; score fades to zero at FADE_KM. */
+const DIFFICULTIES = ["novice", "easy", "moderate", "hard"] as const;
+type Difficulty = (typeof DIFFICULTIES)[number];
+/** stored prefs from the two-mode era: "standard" was the 7-hint flow */
+function readDifficulty(): Difficulty {
+  const raw = read<string>(DIFFICULTY_KEY, "easy");
+  if (raw === "standard") return "hard";
+  return (DIFFICULTIES as readonly string[]).includes(raw) ? (raw as Difficulty) : "easy";
+}
+/** Full points inside the bullseye; fades with distance, but any pin
+ *  inside FADE_KM banks at least MIN_FACTOR of the ceiling. */
 const BULLSEYE_KM = 25;
 const FADE_KM = 1500;
+const MIN_FACTOR = 0.1;
+
 
 const LINES = {
-  start: ["Three hints. Drop wisely.", "Trust the weather.", "Food clues matter."],
+  start: ["Read the hints. Drop wisely.", "Trust the weather.", "Food clues matter."],
   reveal: ["Careful, hints cost points.", "Okay… that one cost us.", "The picture sharpens."],
   lastHint: ["That's all I've got. Drop it."],
   tempted: ["One more hint?", "Do you really need it?"],
@@ -69,14 +88,19 @@ export function MapDropGame({ api }: { api: GameApi }) {
     return MAP_DROP_PUZZLES[pickFreshIndex("map-drop", ids, rng)];
   }, [api.seed, api.mode]);
 
-  const easyHints = useMemo(() => easyHintsFor(place, api.seed), [place, api.seed]);
-  const [difficulty, setDifficulty] = useState<Difficulty>(() =>
-    read<Difficulty>(DIFFICULTY_KEY, "easy"),
-  );
-  // unmapped country → fall back to the standard 7-hint flow for the round
-  const easy = difficulty === "easy" && easyHints !== null;
+  const countryHints = useMemo(() => easyHintsFor(place, api.seed), [place, api.seed]);
+  const easyFree = useMemo(() => easyFreeHintsFor(place, api.seed), [place, api.seed]);
+  const [difficulty, setDifficulty] = useState<Difficulty>(readDifficulty);
+  // easy/moderate need country data; unmapped country → hard's 7-hint flow for the round
+  const eff: Difficulty =
+    (difficulty === "moderate" && countryHints === null) ||
+    (difficulty === "easy" && easyFree === null)
+      ? "hard"
+      : difficulty;
 
-  const [revealed, setRevealed] = useState(easy ? 1 : 3);
+  // easy and moderate open with their three free hints; novice opens with the
+  // name alone; hard reveals one by one
+  const [revealed, setRevealed] = useState(eff === "easy" || eff === "moderate" ? 3 : 1);
   const [pin, setPin] = useState<{ x: number; y: number } | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [rabbit, setRabbit] = useState<{ mood: RabbitMood; line: string }>(() => ({
@@ -101,23 +125,53 @@ export function MapDropGame({ api }: { api: GameApi }) {
   }, [poke, outcome]);
 
   useEffect(() => {
-    if (difficulty === "easy" && !easyHints && import.meta.env.DEV) {
+    if (difficulty === "moderate" && !countryHints && import.meta.env.DEV) {
       console.warn(
-        `Map Drop easy mode: no country data for ${place.name} (${place.country}); standard hints used.`,
+        `Map Drop moderate mode: no country data for ${place.name} (${place.country}); hard hints used.`,
       );
     }
-  }, [difficulty, easyHints, place]);
+  }, [difficulty, countryHints, place]);
 
-  const totalHints = easy ? 3 : 7;
-  const hints = easy && easyHints ? easyHints : place.hints;
-  const ceiling = easy ? EASY_HINT_POINTS[revealed - 1] : HINT_POINTS[revealed - 3];
-  const maxScore = easy ? EASY_MAX_SCORE : MAX_SCORE;
+  const totalHints =
+    eff === "hard"
+      ? 7
+      : eff === "novice"
+        ? NOVICE_TOTAL_HINTS
+        : eff === "easy"
+          ? EASY_TOTAL_HINTS
+          : MODERATE_TOTAL_HINTS;
+  const hints =
+    eff === "novice"
+      ? [
+          place.kind === "mountains"
+            ? `The mountains are called ${place.name}.`
+            : `The ${place.kind}'s name is ${place.name}.`,
+          `You'll find it in ${place.country}.`,
+        ]
+      : eff === "easy"
+        ? [...easyFree!.map((h) => h.text), ...place.hints.slice(0, 3)]
+        : eff === "moderate"
+          ? [...countryHints!, ...place.hints.slice(0, 3)]
+          : place.hints;
+  const ceiling =
+    eff === "novice"
+      ? NOVICE_MAX_SCORE - (revealed - 1) * NOVICE_HINT_COST
+      : eff === "easy"
+        ? EASY_MAX_SCORE - (revealed - 3) * EASY_HINT_COST
+        : eff === "moderate"
+          ? MODERATE_MAX_SCORE - (revealed - 3) * MODERATE_HINT_COST
+          : HINT_POINTS[revealed - 1];
+  const maxScore =
+    eff === "easy" ? EASY_MAX_SCORE : eff === "moderate" ? MODERATE_MAX_SCORE : MAX_SCORE;
+  const modeLabel = difficulty[0].toUpperCase() + difficulty.slice(1);
 
   const switchDifficulty = (d: Difficulty) => {
     if (d === difficulty || outcome) return;
     setDifficulty(d);
     write(DIFFICULTY_KEY, d);
-    setRevealed(d === "easy" && easyHints ? 1 : 3);
+    const nextEff =
+      (d === "easy" && !easyFree) || (d === "moderate" && !countryHints) ? "hard" : d;
+    setRevealed(nextEff === "easy" || nextEff === "moderate" ? 3 : 1);
     bump();
   };
 
@@ -150,7 +204,8 @@ export function MapDropGame({ api }: { api: GameApi }) {
   const confirmDrop = () => {
     if (!pin || outcome) return;
     const dist = Math.round(distanceKm(90 - pin.y, pin.x - 180, place.lat, place.lon));
-    const factor = dist <= BULLSEYE_KM ? 1 : Math.max(0, 1 - dist / FADE_KM);
+    const factor =
+      dist <= BULLSEYE_KM ? 1 : dist < FADE_KM ? Math.max(MIN_FACTOR, 1 - dist / FADE_KM) : 0;
     const score = Math.round(ceiling * factor);
     setOutcome({
       pin,
@@ -179,11 +234,11 @@ export function MapDropGame({ api }: { api: GameApi }) {
       score: outcome.score,
       max: maxScore,
       perfect: outcome.score === maxScore,
-      label: `${place.name}, ${place.country} — ${easy ? "Easy, " : ""}${revealed}/${totalHints} hints, ${outcome.dist.toLocaleString()} km off.`,
+      label: `${place.name}, ${place.country} — ${modeLabel}, ${revealed}/${totalHints} hints, ${outcome.dist.toLocaleString()} km off.`,
       share: [
         "Quiet Arcade: Map Drop",
         `Score: ${outcome.score.toLocaleString()}/${maxScore.toLocaleString()}`,
-        ...(easy ? ["Difficulty: Easy"] : []),
+        `Difficulty: ${modeLabel}`,
         `Distance: ${outcome.dist.toLocaleString()} km`,
         `Hints used: ${revealed}/${totalHints}`,
         `Mode: ${api.mode === "daily" ? "Daily" : "Free Play"}`,
@@ -198,7 +253,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest qa-muted">
-              {outcome.dist <= 600 ? "Pin down" : "The pin wandered"}
+              {outcome.dist <= 600 ? `The ${place.kind}, pinned` : `The ${place.kind} got away`}
             </p>
             <h2 className="mt-1 font-display text-2xl font-semibold" aria-live="polite">
               {place.name}, {place.country}
@@ -223,6 +278,21 @@ export function MapDropGame({ api }: { api: GameApi }) {
           <Stat label="Ceiling" value={`${outcome.base.toLocaleString()} pts`} />
         </div>
 
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={finishRound}>Bank the score</Button>
+          {api.mode === "practice" && api.playAgain && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                finishRound();
+                api.playAgain?.();
+              }}
+            >
+              Play again
+            </Button>
+          )}
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -233,10 +303,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
           <p className="mt-2 text-sm leading-snug">{place.why}</p>
         </motion.div>
 
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <RabbitGuide mood={rabbit.mood} line={rabbit.line} />
-          <Button onClick={finishRound}>Bank the score</Button>
-        </div>
+        <RabbitGuide mood={rabbit.mood} line={rabbit.line} />
       </div>
     );
   }
@@ -246,8 +313,12 @@ export function MapDropGame({ api }: { api: GameApi }) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest qa-muted">Hidden place</p>
-          <h2 className="mt-1 font-display text-2xl font-semibold">Read hints. Drop pin.</h2>
+          <p className="text-xs font-bold uppercase tracking-widest qa-muted">
+            Hidden {place.kind}
+          </p>
+          <h2 className="mt-1 font-display text-2xl font-semibold">
+            Find the {place.kind}. Drop your pin.
+          </h2>
         </div>
         <div className="flex items-center gap-3">
           <div
@@ -255,7 +326,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
             role="tablist"
             aria-label="Hint difficulty"
           >
-            {(["easy", "standard"] as const).map((d) => (
+            {DIFFICULTIES.map((d) => (
               <button
                 key={d}
                 role="tab"
@@ -267,7 +338,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
                     : "qa-muted hover:text-[var(--ink)]"
                 }`}
               >
-                {d === "standard" ? "difficult" : d}
+                {d}
               </button>
             ))}
           </div>
@@ -291,11 +362,23 @@ export function MapDropGame({ api }: { api: GameApi }) {
                 key={`${difficulty}-${i}`}
                 initial={{ opacity: 0, x: -18, filter: "blur(6px)" }}
                 animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                transition={{ duration: 0.5, ease: EASE, delay: i < (easy ? 1 : 3) ? i * 0.15 : 0 }}
+                transition={{ duration: 0.5, ease: EASE, delay: i < (eff === "easy" || eff === "moderate" ? 3 : 1) ? i * 0.15 : 0 }}
                 className="qa-card rounded-2xl px-4 py-3"
               >
                 <p className="text-[10px] font-bold uppercase tracking-widest qa-muted">
-                  {easy ? EASY_LABELS[i] : `Hint ${i + 1}`}
+                  {eff === "novice"
+                    ? i === 0
+                      ? "The name"
+                      : place.kind === "country"
+                        ? "Continent"
+                        : "Country"
+                    : eff === "easy"
+                      ? i < 3
+                        ? easyFree![i].label
+                        : `Closer look ${i - 2}`
+                      : eff === "moderate"
+                        ? (MODERATE_LABELS[i] ?? `Closer look ${i - 2}`)
+                        : `Hint ${i + 1}`}
                 </p>
                 <p className="mt-0.5 text-sm font-medium leading-snug">{hint}</p>
               </motion.div>
@@ -313,12 +396,21 @@ export function MapDropGame({ api }: { api: GameApi }) {
             >
               <p className="text-sm font-semibold">Reveal hint {revealed + 1}</p>
               <p className="text-xs qa-muted">
-                Lowers your ceiling to{" "}
-                {(easy ? EASY_HINT_POINTS[revealed] : HINT_POINTS[revealed - 2]).toLocaleString()} pts
+                {eff === "hard"
+                  ? `Lowers your ceiling to ${HINT_POINTS[revealed].toLocaleString()} pts`
+                  : eff === "novice"
+                    ? `Costs ${NOVICE_HINT_COST.toLocaleString()} points — ceiling drops to ${(NOVICE_MAX_SCORE - revealed * NOVICE_HINT_COST).toLocaleString()} pts`
+                    : eff === "easy"
+                      ? `Costs ${EASY_HINT_COST} points — ceiling drops to ${(EASY_MAX_SCORE - (revealed - 2) * EASY_HINT_COST).toLocaleString()} pts`
+                      : `Costs ${MODERATE_HINT_COST} points — ceiling drops to ${(MODERATE_MAX_SCORE - (revealed - 2) * MODERATE_HINT_COST).toLocaleString()} pts`}
               </p>
             </button>
           ) : (
-            <Chip className="self-start">All {easy ? "three" : "seven"} hints are out</Chip>
+            <Chip className="self-start">
+              {totalHints === 2
+                ? "Both hints are out"
+                : `All ${totalHints === 7 ? "seven" : totalHints === 6 ? "six" : "three"} hints are out`}
+            </Chip>
           )}
 
           <div className="mt-auto pt-3">

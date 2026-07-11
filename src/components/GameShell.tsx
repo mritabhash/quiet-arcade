@@ -70,14 +70,6 @@ export function GameShell({
     [meta.id, dateKey],
   );
 
-  const api: GameApi = {
-    seed,
-    mode,
-    dateKey,
-    showExplanations: settings.showExplanations,
-    finish,
-  };
-
   const switchMode = (m: Mode) => {
     if (m === mode) return;
     setCopied(false);
@@ -87,6 +79,15 @@ export function GameShell({
   const playAgain = () => {
     setCopied(false);
     setState((s) => ({ ...s, runId: s.runId + 1, result: null }));
+  };
+
+  const api: GameApi = {
+    seed,
+    mode,
+    dateKey,
+    showExplanations: settings.showExplanations,
+    finish,
+    playAgain,
   };
 
   const shareResult = async () => {

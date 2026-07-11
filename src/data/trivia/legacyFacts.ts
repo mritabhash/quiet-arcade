@@ -1,53 +1,15 @@
 /**
- * Trivia question bank. Like the flagship puzzle databases, this file keeps
- * compact fact tables and expands them into a large multiple-choice pool at
- * module load — combining new tables (capitals, elements, artworks, dishes,
- * vocabulary, animals, sports) with the existing gazetteer, Time Lens events,
- * and Higher-or-Lower comparison data. The build is fully deterministic
- * (fixed-seed RNG), so question ids/indices are stable across sessions and
- * the daily round is the same for everyone. Total: 10,000+ questions.
+ * Fact tables carried over from the original trivia.ts vault. Rows are
+ * unchanged; the new per-topic builders remap them onto the new topic
+ * list (the old Words/vocab table is intentionally dropped).
  */
 
-import { COUNTRY_ROWS, PLACE_ROWS } from "./gazetteer";
-import { TIME_EVENTS } from "./events";
-import { COMPARISON_CATEGORIES } from "./comparisons";
-import { mulberry32, shuffled } from "../lib/random";
+export type LegacyTopic = string;
 
-export type TriviaTopic =
-  | "Geography"
-  | "History"
-  | "Science & Space"
-  | "Nature"
-  | "Arts & Books"
-  | "Food & Drink"
-  | "Words"
-  | "Sports & Games"
-  | "Numbers";
-
-export const TRIVIA_TOPICS: TriviaTopic[] = [
-  "Geography", "History", "Science & Space", "Nature", "Arts & Books",
-  "Food & Drink", "Words", "Sports & Games", "Numbers",
-];
-
-export interface TriviaQuestion {
-  topic: TriviaTopic;
-  q: string;
-  /** 2 or 4 answers, pre-shuffled deterministically */
-  choices: string[];
-  /** index into choices */
-  answer: number;
-  /** optional one-line explanation */
-  note?: string;
-}
-
-/* ------------------------------------------------------------------ */
-/* fact tables                                                         */
-/* ------------------------------------------------------------------ */
-
-const CONTINENTS6 = ["Europe", "Asia", "Africa", "North America", "South America", "Oceania"];
+export const CONTINENTS6 = ["Europe", "Asia", "Africa", "North America", "South America", "Oceania"];
 
 /** [country, capital, continent] — ambiguous/multi-capital states are omitted. */
-const CAPITALS: [string, string, string][] = [
+export const CAPITALS: [string, string, string][] = [
   ["Albania","Tirana","Europe"],["Andorra","Andorra la Vella","Europe"],["Austria","Vienna","Europe"],
   ["Belarus","Minsk","Europe"],["Belgium","Brussels","Europe"],["Bosnia and Herzegovina","Sarajevo","Europe"],
   ["Bulgaria","Sofia","Europe"],["Croatia","Zagreb","Europe"],["Czechia","Prague","Europe"],
@@ -117,10 +79,9 @@ const CAPITALS: [string, string, string][] = [
 ];
 
 /** transcontinental or debated cases we keep out of "which continent" questions */
-const CONTINENT_SKIP = new Set(["Russia","Türkiye","Kazakhstan","Georgia","Azerbaijan","Armenia","Cyprus","Egypt","Indonesia","Panama"]);
-
+export const CONTINENT_SKIP = new Set(["Russia","Türkiye","Kazakhstan","Georgia","Azerbaijan","Armenia","Cyprus","Egypt","Indonesia","Panama"]);
 /** [element, symbol, atomic number] */
-const ELEMENTS: [string, string, number][] = [
+export const ELEMENTS: [string, string, number][] = [
   ["Hydrogen","H",1],["Helium","He",2],["Lithium","Li",3],["Boron","B",5],["Carbon","C",6],
   ["Nitrogen","N",7],["Oxygen","O",8],["Fluorine","F",9],["Neon","Ne",10],["Sodium","Na",11],
   ["Magnesium","Mg",12],["Aluminium","Al",13],["Silicon","Si",14],["Phosphorus","P",15],["Sulfur","S",16],
@@ -131,10 +92,9 @@ const ELEMENTS: [string, string, number][] = [
   ["Tungsten","W",74],["Platinum","Pt",78],["Gold","Au",79],["Mercury","Hg",80],["Lead","Pb",82],
   ["Radon","Rn",86],["Uranium","U",92],
 ];
-
 /** [work, creator, kind] */
-type ArtKind = "novel" | "play" | "painting" | "composition" | "sculpture";
-const ARTS: [string, string, ArtKind][] = [
+export type ArtKind = "novel" | "play" | "painting" | "composition" | "sculpture";
+export const ARTS: [string, string, ArtKind][] = [
   ["Pride and Prejudice","Jane Austen","novel"],["Emma","Jane Austen","novel"],
   ["1984","George Orwell","novel"],["Animal Farm","George Orwell","novel"],
   ["War and Peace","Leo Tolstoy","novel"],["Anna Karenina","Leo Tolstoy","novel"],
@@ -207,9 +167,8 @@ const ARTS: [string, string, ArtKind][] = [
   ["Messiah","George Frideric Handel","composition"],
   ["David","Michelangelo","sculpture"],["The Thinker","Auguste Rodin","sculpture"],
 ];
-
 /** [dish, country it is most associated with] */
-const DISHES: [string, string][] = [
+export const DISHES: [string, string][] = [
   ["Sushi","Japan"],["Ramen","Japan"],["Tempura","Japan"],["Kimchi","South Korea"],["Bibimbap","South Korea"],
   ["Pad Thai","Thailand"],["Tom Yum","Thailand"],["Pho","Vietnam"],["Bánh mì","Vietnam"],
   ["Peking Duck","China"],["Mapo Tofu","China"],["Dim Sum","China"],["Biryani","India"],
@@ -233,45 +192,8 @@ const DISHES: [string, string][] = [
   ["Moules-frites","Belgium"],["Smørrebrød","Denmark"],["Köttbullar (meatballs)","Sweden"],
   ["Gravlax","Sweden"],["Lamington","Australia"],["Meat Pie","Australia"],["Hāngī","New Zealand"],
 ];
-
-/** [word, short meaning] */
-const VOCAB: [string, string][] = [
-  ["ephemeral","lasting a very short time"],["ubiquitous","found everywhere at once"],
-  ["gregarious","sociable and fond of company"],["laconic","using very few words"],
-  ["garrulous","excessively talkative"],["benevolent","kind and well-meaning"],
-  ["frugal","careful and sparing with money"],["opulent","rich and luxurious"],
-  ["arid","very dry, with little rain"],["verdant","green with growing plants"],
-  ["lucid","clear and easy to understand"],["tenacious","holding firm and not letting go"],
-  ["audacious","bold and daring"],["meticulous","extremely careful about detail"],
-  ["pragmatic","practical rather than idealistic"],["obsolete","no longer in use"],
-  ["serene","calm and untroubled"],["turbulent","full of confusion and disorder"],
-  ["candid","honest and direct"],["timid","easily frightened, shy"],
-  ["ravenous","extremely hungry"],["jubilant","full of triumphant joy"],
-  ["melancholy","a feeling of thoughtful sadness"],["furtive","secretive and sly"],
-  ["placid","calm and not easily excited"],["brittle","hard but easily broken"],
-  ["pliable","easily bent or shaped"],["astute","sharp and shrewd in judgement"],
-  ["naive","innocent and overly trusting"],["zealous","full of energetic enthusiasm"],
-  ["apathetic","showing no interest or emotion"],["eloquent","fluent and persuasive in speech"],
-  ["reticent","reluctant to speak openly"],["amiable","friendly and pleasant"],
-  ["abundant","existing in large quantities"],["scarce","in short supply"],
-  ["opaque","impossible to see through"],["nimble","quick and light in movement"],
-  ["lethargic","sluggish and lacking energy"],["prudent","cautious and sensible"],
-  ["reckless","acting without care for danger"],["arrogant","exaggerating one's own importance"],
-  ["counterfeit","made in imitation to deceive"],["dormant","inactive for a period of time"],
-  ["durable","able to last a long time"],["vivid","strikingly bright or intense"],
-  ["ancient","belonging to the very distant past"],["contemporary","belonging to the present time"],
-  ["drought","a long period without rain"],["oasis","a fertile watered spot in a desert"],
-  ["archipelago","a chain or cluster of islands"],["peninsula","land almost surrounded by water"],
-  ["plateau","a broad area of high, flat land"],["estuary","a river mouth meeting the tide"],
-  ["glacier","a slowly moving mass of ice"],["nocturnal","active mainly at night"],
-  ["diurnal","active mainly during the day"],["herbivore","an animal that eats plants"],
-  ["carnivore","an animal that eats meat"],["omnivore","an animal that eats plants and meat"],
-  ["hibernate","to pass the winter in deep sleep"],["migrate","to move with the seasons"],
-  ["camouflage","colouring that blends into surroundings"],["anonymous","of unknown or hidden name"],
-];
-
 /** collective nouns: [animal (plural), group name] */
-const COLLECTIVES: [string, string][] = [
+export const COLLECTIVES: [string, string][] = [
   ["crows","a murder"],["owls","a parliament"],["lions","a pride"],["dolphins","a pod"],
   ["geese","a gaggle"],["starlings","a murmuration"],["sharks","a shiver"],["giraffes","a tower"],
   ["rhinos","a crash"],["zebras","a dazzle"],["tigers","an ambush"],["lemurs","a conspiracy"],
@@ -283,14 +205,14 @@ const COLLECTIVES: [string, string][] = [
 ];
 
 /** baby animals: [animal, baby name] */
-const BABIES: [string, string][] = [
+export const BABIES: [string, string][] = [
   ["kangaroo","joey"],["swan","cygnet"],["hare","leveret"],["goose","gosling"],["deer","fawn"],
   ["bear","cub"],["fox","kit"],["horse","foal"],["whale","calf"],["owl","owlet"],
   ["frog","tadpole"],["seal","pup"],["pigeon","squab"],["goat","kid"],["sheep","lamb"],["pig","piglet"],
 ];
 
 /** animal classes: [animal, class] */
-const ANIMAL_CLASS: [string, string][] = [
+export const ANIMAL_CLASS: [string, string][] = [
   ["dolphin","mammal"],["whale","mammal"],["bat","mammal"],["platypus","mammal"],["seal","mammal"],
   ["elephant","mammal"],["hedgehog","mammal"],["shark","fish"],["seahorse","fish"],["eel","fish"],
   ["salmon","fish"],["penguin","bird"],["ostrich","bird"],["kiwi","bird"],["peacock","bird"],
@@ -298,10 +220,9 @@ const ANIMAL_CLASS: [string, string][] = [
   ["turtle","reptile"],["snake","reptile"],["crocodile","reptile"],["gecko","reptile"],
   ["chameleon","reptile"],["komodo dragon","reptile"],["toad","amphibian"],
 ];
-const CLASS_POOL = ["mammal", "bird", "reptile", "amphibian", "fish"];
-
+export const CLASS_POOL = ["mammal", "bird", "reptile", "amphibian", "fish"];
 /** ready-made questions: [topic, question, correct, wrong, wrong, wrong, note?] */
-const CURATED: [TriviaTopic, string, string, string, string, string, string?][] = [
+export const CURATED: [LegacyTopic, string, string, string, string, string, string?][] = [
   ["Sports & Games","How many players does a football (soccer) team field at once?","11","9","10","12"],
   ["Sports & Games","How many players per side are on court in basketball?","5","6","7","4"],
   ["Sports & Games","How many players per side take the field in cricket?","11","10","12","13"],
@@ -483,325 +404,3 @@ const CURATED: [TriviaTopic, string, string, string, string, string, string?][] 
   ["Words","How many letters are in the English alphabet?","26","24","25","28"],
   ["Words","The dot over a lowercase 'i' or 'j' is called a…?","Tittle","Serif","Diacritic","Cedilla"],
 ];
-
-/* ------------------------------------------------------------------ */
-/* builders                                                            */
-/* ------------------------------------------------------------------ */
-
-const rng = mulberry32(271828183);
-const QUESTIONS: TriviaQuestion[] = [];
-const seen = new Set<string>();
-
-function push(topic: TriviaTopic, q: string, correct: string, wrongs: string[], note?: string) {
-  const need = wrongs.length >= 3 ? 3 : 1;
-  const ws = [...new Set(wrongs.filter((w) => w && w !== correct))].slice(0, need);
-  if (ws.length < need) return;
-  const key = q + "::" + correct;
-  if (seen.has(key)) return;
-  seen.add(key);
-  const choices = shuffled(rng, [correct, ...ws]);
-  QUESTIONS.push({ topic, q, choices, answer: choices.indexOf(correct), note });
-}
-
-/** deterministic sample of up to n entries matching the filter */
-function pickN<T>(pool: readonly T[], n: number, ok: (t: T) => boolean): T[] {
-  const out: T[] = [];
-  // start at a seeded offset and walk — cheaper than shuffling the pool each call
-  const start = Math.floor(rng() * pool.length);
-  for (let i = 0; i < pool.length && out.length < n; i++) {
-    const t = pool[(start + i) % pool.length];
-    if (ok(t)) out.push(t);
-  }
-  return out;
-}
-
-const fmtYear = (y: number) => (y < 0 ? `${-y} BC` : `${y}`);
-
-/* --- capitals ------------------------------------------------------ */
-{
-  for (const [country, capital, continent] of CAPITALS) {
-    const sameCont = CAPITALS.filter(([c, , k]) => k === continent && c !== country);
-    const otherCaps = pickN(sameCont, 3, () => true).map((r) => r[1]);
-    push("Geography", `What is the capital of ${country}?`, capital, otherCaps);
-    const otherCountries = pickN(sameCont, 3, () => true).map((r) => r[0]);
-    push("Geography", `${capital} is the capital of which country?`, country, otherCountries);
-    if (!CONTINENT_SKIP.has(country)) {
-      const wrongConts = pickN(CONTINENTS6, 3, (c) => c !== continent);
-      push("Geography", `${country} is in which continent?`, continent, wrongConts);
-    }
-  }
-}
-
-const continentOf = new Map<string, string>();
-for (const [c, , k] of CAPITALS) continentOf.set(c, k);
-for (const r of COUNTRY_ROWS) if (!continentOf.has(r[0])) continentOf.set(r[0], r[1]);
-const countriesByContinent = new Map<string, string[]>();
-for (const [c, k] of continentOf) {
-  if (!countriesByContinent.has(k)) countriesByContinent.set(k, []);
-  countriesByContinent.get(k)!.push(c);
-}
-
-/* --- gazetteer countries: borders, landlocked, population, climate -- */
-{
-  for (const row of COUNTRY_ROWS) {
-    const [name, continent, , , , , , , , borderStr] = row;
-    const borders = borderStr ? borderStr.split("|") : [];
-    if (borders.length) {
-      const others = (countriesByContinent.get(continent) ?? []).filter(
-        (c) => c !== name && !borders.includes(c),
-      );
-      const wrongs = pickN(others, 3, () => true);
-      const correct = borders[Math.floor(rng() * borders.length)];
-      push(
-        "Geography",
-        `Which of these countries shares a border with ${name}?`,
-        correct,
-        wrongs,
-        `${name} borders ${borders.join(", ")}.`,
-      );
-    }
-    if (row[7] === 0) {
-      const coastalSame = COUNTRY_ROWS.filter((r) => r[1] === continent && r[7] === 1 && r[0] !== name);
-      const wrongs = pickN(coastalSame, 3, () => true).map((r) => r[0]);
-      push("Geography", `Which of these countries is landlocked?`, name, wrongs,
-        `${name} has no coastline.`);
-    }
-  }
-  // population pairs
-  for (const a of COUNTRY_ROWS) {
-    const partners = pickN(COUNTRY_ROWS, 6, (b) => b !== a && (a[5] >= b[5] * 2.5 || b[5] >= a[5] * 2.5));
-    for (const b of partners) {
-      const hi = a[5] > b[5] ? a : b;
-      const pair = [a, b].sort((x, y) => x[0].localeCompare(y[0]));
-      push("Numbers", `Which country has the larger population — ${pair[0][0]} or ${pair[1][0]}?`, hi[0],
-        [pair[0][0] === hi[0] ? pair[1][0] : pair[0][0]],
-        `${hi[0]}: about ${hi[5]} million people; ${(hi === a ? b : a)[0]}: about ${(hi === a ? b : a)[5]} million.`);
-    }
-    // climate pairs
-    const warm = pickN(COUNTRY_ROWS, 4, (b) => b !== a && Math.abs(a[6] - b[6]) >= 9);
-    for (const b of warm) {
-      const hot = a[6] > b[6] ? a : b;
-      const cold = hot === a ? b : a;
-      const pair = [a, b].sort((x, y) => x[0].localeCompare(y[0]));
-      push("Geography", `Which country is warmer on average — ${pair[0][0]} or ${pair[1][0]}?`, hot[0], [cold[0]],
-        `Rough annual means: ${hot[0]} ~${hot[6]} °C, ${cold[0]} ~${cold[6]} °C.`);
-    }
-  }
-}
-
-/* --- gazetteer places ---------------------------------------------- */
-{
-  const nameCount = new Map<string, number>();
-  for (const p of PLACE_ROWS) nameCount.set(p[0], (nameCount.get(p[0]) ?? 0) + 1);
-  // shared islands / regions that span borders make bad single-answer questions
-  const AMBIGUOUS = new Set(["Borneo", "New Guinea", "Ireland", "Hispaniola", "Timor", "Tierra del Fuego"]);
-  const askable = PLACE_ROWS.filter(
-    (p) => nameCount.get(p[0]) === 1 && !AMBIGUOUS.has(p[0]) &&
-      ["c", "i", "s", "lm"].includes(p[7]) && continentOf.has(p[1]),
-  );
-
-  for (const p of askable) {
-    const [name, country, , , , , , kind] = p;
-    const continent = continentOf.get(country)!;
-    const wrongs = pickN(countriesByContinent.get(continent) ?? [], 3, (c) => c !== country);
-    const q =
-      kind === "c" ? `Which country is the city of ${name} in?`
-      : kind === "i" ? `The island of ${name} belongs to which country?`
-      : kind === "s" ? `${name} is a state or province of which country?`
-      : `Which country is ${name} in?`;
-    push("Geography", q, country, wrongs);
-  }
-
-  // reverse: which of these cities is in X?
-  const cities = askable.filter((p) => p[7] === "c");
-  const cityByCountry = new Map<string, typeof cities>();
-  for (const c of cities) {
-    if (!cityByCountry.has(c[1])) cityByCountry.set(c[1], []);
-    cityByCountry.get(c[1])!.push(c);
-  }
-  for (const [country, list] of cityByCountry) {
-    const continent = continentOf.get(country)!;
-    for (const target of list.slice(0, 2)) {
-      const wrongs = pickN(cities, 3, (c) => c[1] !== country && continentOf.get(c[1]) === continent)
-        .map((c) => c[0]);
-      push("Geography", `Which of these cities is in ${country}?`, target[0], wrongs,
-        `${target[0]} is in ${country}.`);
-    }
-  }
-
-  // north/south and east/west pairs
-  const latLabel = (p: (typeof cities)[number]) =>
-    `${p[0]} sits near ${Math.abs(p[2]).toFixed(0)}°${p[2] >= 0 ? "N" : "S"}`;
-  const pairSeen = new Set<string>();
-  cities.forEach((a, ai) => {
-    const partners = pickN(cities, 5, (b) => b !== a && Math.abs(a[2] - b[2]) >= 13);
-    for (const b of partners) {
-      const key = [a[0], b[0]].sort().join("|");
-      if (pairSeen.has(key)) continue;
-      pairSeen.add(key);
-      const north = a[2] > b[2] ? a : b;
-      const south = north === a ? b : a;
-      const pair = [a, b].sort((x, y) => x[0].localeCompare(y[0]));
-      if (ai % 2 === 0) {
-        push("Geography", `Which city lies further north — ${pair[0][0]} or ${pair[1][0]}?`, north[0], [south[0]],
-          `${latLabel(north)}; ${latLabel(south)}.`);
-      } else {
-        push("Geography", `Which city lies further south — ${pair[0][0]} or ${pair[1][0]}?`, south[0], [north[0]],
-          `${latLabel(south)}; ${latLabel(north)}.`);
-      }
-    }
-    // east/west, away from the antimeridian to keep the answer unambiguous
-    if (a[3] > -140 && a[3] < 140) {
-      const ew = pickN(cities, 3, (b) => b !== a && b[3] > -140 && b[3] < 140 && Math.abs(a[3] - b[3]) >= 28);
-      for (const b of ew) {
-        const key = "ew:" + [a[0], b[0]].sort().join("|");
-        if (pairSeen.has(key)) continue;
-        pairSeen.add(key);
-        const east = a[3] > b[3] ? a : b;
-        const west = east === a ? b : a;
-        const pair = [a, b].sort((x, y) => x[0].localeCompare(y[0]));
-        push("Geography", `Which city lies further east — ${pair[0][0]} or ${pair[1][0]}?`, east[0], [west[0]]);
-      }
-    }
-    // city population pairs
-    if (a[4] >= 0.08) {
-      const pop = pickN(cities, 3, (b) => b !== a && b[4] >= 0.08 &&
-        (a[4] >= b[4] * 3 || b[4] >= a[4] * 3) && Math.abs(a[4] - b[4]) >= 0.5);
-      for (const b of pop) {
-        const key = "pop:" + [a[0], b[0]].sort().join("|");
-        if (pairSeen.has(key)) continue;
-        pairSeen.add(key);
-        const hi = a[4] > b[4] ? a : b;
-        const lo = hi === a ? b : a;
-        const pair = [a, b].sort((x, y) => x[0].localeCompare(y[0]));
-        push("Numbers", `Which city has the larger population — ${pair[0][0]} or ${pair[1][0]}?`, hi[0], [lo[0]],
-          `${hi[0]}: roughly ${hi[4]} million; ${lo[0]}: roughly ${lo[4]} million.`);
-      }
-    }
-  });
-}
-
-/* --- history: Time Lens events ------------------------------------- */
-{
-  const OFFSETS = [7, 12, 18, 26, 35, 47, 61];
-  for (const ev of TIME_EVENTS) {
-    const wrongs = new Set<number>();
-    while (wrongs.size < 3) {
-      const off = OFFSETS[Math.floor(rng() * OFFSETS.length)] * (rng() < 0.5 ? -1 : 1);
-      const y = ev.year + off;
-      if (y !== ev.year && !(ev.year > 0 && y <= 0)) wrongs.add(y);
-    }
-    push("History", `In which year: ${ev.label.toLowerCase()}?`, fmtYear(ev.year),
-      [...wrongs].map(fmtYear));
-  }
-  for (let i = 0; i < TIME_EVENTS.length; i++) {
-    for (let j = i + 1; j < TIME_EVENTS.length; j++) {
-      const a = TIME_EVENTS[i];
-      const b = TIME_EVENTS[j];
-      if (Math.abs(a.year - b.year) < 25) continue;
-      const first = a.year < b.year ? a : b;
-      const later = first === a ? b : a;
-      const pair = [a.label, b.label].sort();
-      push("History", `Which happened first — “${pair[0]}” or “${pair[1]}”?`, first.label, [later.label],
-        `${first.label} (${fmtYear(first.year)}) came before ${later.label.toLowerCase()} (${fmtYear(later.year)}).`);
-    }
-  }
-}
-
-/* --- numbers: Higher-or-Lower comparisons --------------------------- */
-{
-  for (const cat of COMPARISON_CATEGORIES) {
-    for (let i = 0; i < cat.items.length; i++) {
-      for (let j = i + 1; j < cat.items.length; j++) {
-        const a = cat.items[i];
-        const b = cat.items[j];
-        const [lo, hi] = a.value < b.value ? [a, b] : [b, a];
-        if (lo.value <= 0 || hi.value / lo.value < 1.35) continue;
-        push("Numbers", `${cat.question} — ${a.name} or ${b.name}?`, hi.name, [lo.name],
-          `${hi.name}: ${hi.value.toLocaleString()} ${cat.unit}; ${lo.name}: ${lo.value.toLocaleString()} ${cat.unit}.`);
-      }
-    }
-  }
-}
-
-/* --- science: elements ---------------------------------------------- */
-{
-  for (const [name, symbol, num] of ELEMENTS) {
-    const wrongSyms = pickN(ELEMENTS, 3, (e) => e[1] !== symbol).map((e) => e[1]);
-    push("Science & Space", `What is the chemical symbol for ${name.toLowerCase()}?`, symbol, wrongSyms);
-    const wrongNames = pickN(ELEMENTS, 3, (e) => e[0] !== name).map((e) => e[0]);
-    push("Science & Space", `Which element has the symbol ${symbol}?`, name, wrongNames);
-    if (num <= 30 || ["Silver", "Gold", "Mercury", "Lead", "Uranium", "Iron", "Copper"].includes(name)) {
-      const wrongs = pickN(ELEMENTS, 3, (e) => e[2] !== num).map((e) => e[0]);
-      push("Science & Space", `Which element has atomic number ${num}?`, name, wrongs);
-    }
-  }
-}
-
-/* --- arts & books ---------------------------------------------------- */
-{
-  const VERB: Record<ArtKind, string> = {
-    novel: "wrote", play: "wrote", painting: "painted", composition: "composed", sculpture: "sculpted",
-  };
-  const PLURAL: Record<ArtKind, string> = {
-    novel: "novels", play: "plays", painting: "paintings", composition: "works", sculpture: "sculptures",
-  };
-  ARTS.forEach(([work, creator, kind], i) => {
-    const wrongCreators = [...new Set(
-      pickN(ARTS, 8, (r) => r[2] === kind && r[1] !== creator).map((r) => r[1]),
-    )].slice(0, 3);
-    push("Arts & Books", `Who ${VERB[kind]} “${work}”?`, creator, wrongCreators);
-    if (i % 2 === 0) {
-      const wrongWorks = pickN(ARTS, 3, (r) => r[2] === kind && r[1] !== creator).map((r) => r[0]);
-      push("Arts & Books", `Which of these ${PLURAL[kind]} is by ${creator}?`, work, wrongWorks);
-    }
-  });
-}
-
-/* --- food ------------------------------------------------------------ */
-{
-  DISHES.forEach(([dish, country], i) => {
-    const wrongCountries = [...new Set(pickN(DISHES, 8, (d) => d[1] !== country).map((d) => d[1]))].slice(0, 3);
-    push("Food & Drink", `Which country is ${dish} most associated with?`, country, wrongCountries);
-    if (i % 2 === 0) {
-      const wrongDishes = pickN(DISHES, 3, (d) => d[1] !== country);
-      push("Food & Drink", `Which of these dishes comes from ${country}?`, dish, wrongDishes.map((d) => d[0]));
-    }
-  });
-}
-
-/* --- words ------------------------------------------------------------ */
-{
-  VOCAB.forEach(([word, meaning], i) => {
-    const wrongMeanings = pickN(VOCAB, 3, (v) => v[0] !== word).map((v) => v[1]);
-    push("Words", `What does “${word}” mean?`, meaning, wrongMeanings);
-    if (i % 2 === 0) {
-      const wrongWords = pickN(VOCAB, 3, (v) => v[0] !== word).map((v) => v[0]);
-      push("Words", `Which word means “${meaning}”?`, word, wrongWords);
-    }
-  });
-}
-
-/* --- nature ----------------------------------------------------------- */
-{
-  for (const [animal, group] of COLLECTIVES) {
-    const wrongs = pickN(COLLECTIVES, 3, (c) => c[1] !== group).map((c) => c[1]);
-    push("Nature", `What is a group of ${animal} called?`, group, wrongs);
-  }
-  for (const [animal, baby] of BABIES) {
-    const wrongs = pickN(BABIES, 3, (b) => b[1] !== baby).map((b) => b[1]);
-    push("Nature", `What is a baby ${animal} called?`, baby, wrongs);
-  }
-  for (const [animal, cls] of ANIMAL_CLASS) {
-    const wrongs = pickN(CLASS_POOL, 3, (c) => c !== cls);
-    push("Nature", `A ${animal} belongs to which class of animals?`, cls, wrongs);
-  }
-}
-
-/* --- curated ----------------------------------------------------------- */
-for (const [topic, q, correct, w1, w2, w3, note] of CURATED) {
-  push(topic, q, correct, [w1, w2, w3], note);
-}
-
-export const TRIVIA_QUESTIONS: readonly TriviaQuestion[] = QUESTIONS;
-export const TRIVIA_COUNT = QUESTIONS.length;

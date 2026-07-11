@@ -14,10 +14,10 @@ export const GAMES: GameMeta[] = [
     flagship: true,
     freePlayLabel: "Play another Map Drop",
     howTo: [
-      "Read the first three hints and form a hunch.",
-      "Reveal up to four more — each one lowers the round's ceiling (5,000 → 1,500).",
+      "Pick a difficulty: Novice tells you the place's name outright — you just have to find it; Easy opens with three famous facts anyone might know; Moderate opens with three country hints — flag, language, fact; Hard deals seven cryptic hints one at a time.",
+      "Extra hints lower the round's ceiling — on Novice one 2,000-point reveal says where it sits; closer looks cost a flat 200 points on Easy and 600 on Moderate; on Hard every reveal drops it.",
       "Click or drag on the map to place your pin, then press Confirm drop.",
-      "Closer pins keep more points: within 25 km is a bullseye, and points fade out by 1,500 km.",
+      "Closer pins keep more points: within 25 km is a bullseye, and any pin under 1,500 km always banks at least a tenth of the ceiling.",
     ],
   },
   {
@@ -163,14 +163,14 @@ export const GAMES: GameMeta[] = [
     title: "Country Shape",
     short: "Recognise a country by its silhouette alone.",
     description:
-      "Eight stylised stone silhouettes, four names each. No borders, no labels — just the quiet shape of a place you may know by heart.",
+      "Eight true silhouettes lifted straight from the world map, four names each. No borders, no labels — just the quiet shape of a place you may know by heart.",
     minutes: "~3 min",
     difficulty: "Gentle",
     type: "Geography",
     accent: "clay",
     howTo: [
       "Look at the carved silhouette and pick the matching country.",
-      "Shapes are gently stylised, so trust the overall outline.",
+      "Outlines are real but simplified, and every country is scaled to fit — trust the shape, not the size.",
       "Eight shapes per day, one point each.",
     ],
   },
@@ -209,18 +209,18 @@ export const GAMES: GameMeta[] = [
   {
     id: "trivia",
     title: "Trivia",
-    short: "Ten questions from a vault of more than ten thousand, across nine topics.",
+    short: "Fifteen questions, nine topics, three moods — from a vault of ninety thousand.",
     description:
-      "The arcade's deepest vault: over ten thousand questions spanning geography, history, science, nature, arts, food, words, sport, and numbers. Ten surface each round — answer them quietly and see how your lantern burns.",
-    minutes: "~4 min",
+      "The arcade's deepest vault: around ninety thousand questions across history, geography, flags, countries, movies & TV, pop culture, tech, science, and the cosmos. Pick a topic or mix them, choose easy, moderate, or hard, pack a lifeline or three, and let the points pile up.",
+    minutes: "~5 min",
     difficulty: "Medium",
     type: "Trivia",
     accent: "gold",
     howTo: [
-      "Read each question and pick one of the answers.",
-      "Correct picks glow sage; misses show the true answer.",
-      "Ten questions per round, one point each — topics always vary.",
-      "The daily round is the same for everyone; free play draws fresh questions.",
+      "Pick a topic (or Misc for a blend), a mode, and your lifelines — easy packs 1, moderate 2, hard 3.",
+      "Fifteen questions, four options each. Later questions are worth more, and a streak of three or more adds bonus points.",
+      "Lifelines, once per round: 50-50 clears two wrong options, Plus One grants a second guess, Topic Swap trades the question, Host Hint drops a clue.",
+      "Misses never subtract points. The daily round is the same for everyone with your setup; free play draws fresh questions.",
     ],
   },
   {
