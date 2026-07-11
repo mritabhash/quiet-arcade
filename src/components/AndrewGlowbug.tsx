@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type TargetAndTransition } from "framer-motion";
 import { useSettings } from "../context/SettingsContext";
 import { EASE } from "./motion";
 
 /**
  * Andrew Glowbug — the trivia vault's guardian. A luminous green glowworm
- * of impeccable breeding: tuxedo top, spectacles, top hat, cane. He drifts
- * about the empty margins of the page and delivers a politely devastating
- * remark every time an answer goes astray. Purely decorative overlay —
- * never intercepts the pointer, hides where there are no margins to haunt,
- * and perches quietly in a corner when motion is reduced.
+ * of impeccable breeding: tuxedo top, spectacles, top hat, cane. He stands
+ * at the left hand of the question, delivers a politely devastating remark
+ * every time an answer goes astray — and takes being poked very, very
+ * poorly. Each tap earns a crosser face and a crosser line.
  */
+
+type Mood = "calm" | "judging" | "cross";
 
 const GREETING = "Andrew Glowbug, guardian of this vault. Do try to be sensible.";
 
@@ -39,36 +40,38 @@ const JUDGE_LINES = [
   "How thrillingly incorrect.",
 ];
 
+/* being prodded is beneath his dignity — and he escalates */
+const POKE_LINES = [
+  "I beg your pardon. One does not poke the guardian.",
+  "Again?! This tuxedo is dry-clean only.",
+  "Cease that at once. The cane is not purely decorative.",
+  "Right. You are officially my least favourite visitor.",
+  "One more and I shall write to the management. In ink.",
+  "…I am no longer speaking to you.",
+];
+
 const BUBBLE_MS = 5200;
-/** he relocates roughly every two minutes… */
-const STAND_STILL_MS = 105_000;
-const STAND_STILL_JITTER_MS = 45_000;
-/** …and takes his time about it */
-const GLIDE_SECONDS = 32;
 
-/** the centered content column he must never loom over */
-const CONTENT_WIDTH = 830;
-const WORM_WIDTH = 96;
+const BODY_ANIM: Record<Mood, TargetAndTransition> = {
+  calm: {
+    x: 0,
+    y: [0, -3, 0],
+    rotate: 0,
+    scale: 1,
+    transition: { duration: 5.5, repeat: Infinity, ease: "easeInOut" },
+  },
+  judging: { x: 0, y: 0, rotate: -4, scale: 1.05, transition: { duration: 0.4, ease: EASE } },
+  cross: {
+    x: [0, -3, 3, -2, 2, 0],
+    y: 0,
+    rotate: [0, -5, 5, -4, 4, -3],
+    scale: 1.07,
+    transition: { duration: 0.5 },
+  },
+};
 
-interface Spot {
-  x: number;
-  y: number;
-  left: boolean;
-}
-
-/** a waypoint strictly inside the page's side gutters, clear of all text */
-function pickSpot(): Spot {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  const gutter = Math.max(0, (w - CONTENT_WIDTH) / 2);
-  const room = Math.max(8, gutter - WORM_WIDTH - 16);
-  const left = Math.random() < 0.5;
-  const x = left ? 12 + Math.random() * room : w - WORM_WIDTH - 12 - Math.random() * room;
-  const y = h * 0.16 + Math.random() * (h * 0.58);
-  return { x, y, left };
-}
-
-function Worm({ judging }: { judging: boolean }) {
+function Worm({ mood }: { mood: Mood }) {
+  const cross = mood === "cross";
   return (
     <svg viewBox="0 0 110 130" className="h-full w-full" role="img" aria-label="Andrew Glowbug, guardian of the vault">
       <defs>
@@ -77,10 +80,15 @@ function Worm({ judging }: { judging: boolean }) {
           <stop offset="55%" stopColor="#9fd08a" stopOpacity="0.16" />
           <stop offset="100%" stopColor="#9fd08a" stopOpacity="0" />
         </radialGradient>
+        <radialGradient id="andrewGlowCross" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#d8a05a" stopOpacity="0.5" />
+          <stop offset="55%" stopColor="#d8a05a" stopOpacity="0.16" />
+          <stop offset="100%" stopColor="#d8a05a" stopOpacity="0" />
+        </radialGradient>
       </defs>
 
-      {/* the glow that makes him a glowworm */}
-      <circle cx="52" cy="86" r="46" fill="url(#andrewGlow)" />
+      {/* the glow that makes him a glowworm — indignation runs amber */}
+      <circle cx="52" cy="86" r="46" fill={cross ? "url(#andrewGlowCross)" : "url(#andrewGlow)"} />
 
       {/* tail segments, curled behind like a settee */}
       <ellipse cx="76" cy="112" rx="11" ry="8.5" fill="#8bbf74" stroke="#3f5a35" strokeWidth="1.8" />
@@ -122,6 +130,16 @@ function Worm({ judging }: { judging: boolean }) {
         <ellipse cx="38" cy="40" rx="14" ry="3.6" fill="#2b2b33" stroke="#1b1b21" strokeWidth="1.6" />
       </g>
 
+      {/* the vein of a gentleman pushed too far */}
+      {cross && (
+        <g stroke="#c0452f" strokeWidth="1.9" strokeLinecap="round" fill="none">
+          <path d="M53.5 33.5 Q56.5 36 53.5 38.5" />
+          <path d="M59.5 33.5 Q56.5 36 59.5 38.5" />
+          <path d="M54 31.5 Q56.5 34 59 31.5" />
+          <path d="M54 40.5 Q56.5 38 59 40.5" />
+        </g>
+      )}
+
       {/* spectacles */}
       <g stroke="#b78325" strokeWidth="1.6" fill="none">
         <circle cx="31.5" cy="52.5" r="4.6" />
@@ -133,20 +151,39 @@ function Worm({ judging }: { judging: boolean }) {
 
       {/* the face: permanently, profoundly unimpressed. He does not smile. */}
       <g>
-        {/* heavy brows knotted toward the bridge — steeper when judging */}
+        {/* heavy brows knotted toward the bridge — steeper the crosser he gets */}
         <path
-          d={judging ? "M27.5 45.5 L34.8 49" : "M28 46.5 L34.6 48.6"}
+          d={cross ? "M26.8 44.2 L35.2 49.8" : mood === "judging" ? "M27.5 45.5 L34.8 49" : "M28 46.5 L34.6 48.6"}
           stroke="#3f5a35" strokeWidth="2.4" strokeLinecap="round"
         />
         <path
-          d={judging ? "M48.5 45.5 L41.2 49" : "M48 46.5 L41.4 48.6"}
+          d={cross ? "M49.2 44.2 L40.8 49.8" : mood === "judging" ? "M48.5 45.5 L41.2 49" : "M48 46.5 L41.4 48.6"}
           stroke="#3f5a35" strokeWidth="2.4" strokeLinecap="round"
         />
-        {/* half-lidded eyes that have seen every wrong answer before */}
-        <path d="M28.8 52 L34.2 52" stroke="#3a2c22" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M41.8 52 L47.2 52" stroke="#3a2c22" strokeWidth="1.8" strokeLinecap="round" />
-        <circle cx="31.5" cy="53.6" r="1.2" fill="#3a2c22" />
-        <circle cx="44.5" cy="53.6" r="1.2" fill="#3a2c22" />
+        {/* half-lidded eyes that have seen every wrong answer before —
+            narrowed to slits when prodded */}
+        {cross ? (
+          <>
+            <path d="M28.5 51.2 L34.3 53" stroke="#3a2c22" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M47.5 51.2 L41.7 53" stroke="#3a2c22" strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="31.5" cy="54.2" r="1.1" fill="#3a2c22" />
+            <circle cx="44.5" cy="54.2" r="1.1" fill="#3a2c22" />
+          </>
+        ) : (
+          <>
+            <path d="M28.8 52 L34.2 52" stroke="#3a2c22" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M41.8 52 L47.2 52" stroke="#3a2c22" strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="31.5" cy="53.6" r="1.2" fill="#3a2c22" />
+            <circle cx="44.5" cy="53.6" r="1.2" fill="#3a2c22" />
+          </>
+        )}
+        {/* a flush of pure indignation */}
+        {cross && (
+          <>
+            <circle cx="25.8" cy="55.5" r="2.2" fill="#d9847a" opacity="0.55" />
+            <circle cx="50.2" cy="55.5" r="2.2" fill="#d9847a" opacity="0.55" />
+          </>
+        )}
       </g>
 
       {/* a distinguished grey beard, combed and grave */}
@@ -159,9 +196,17 @@ function Worm({ judging }: { judging: boolean }) {
         <path d="M33 63 Q33.5 68 35.5 71" fill="none" stroke="#b3a98d" strokeWidth="1" strokeLinecap="round" />
         <path d="M38 63.5 Q38 69 38 72.5" fill="none" stroke="#b3a98d" strokeWidth="1" strokeLinecap="round" />
         <path d="M43 63 Q42.5 68 40.5 71" fill="none" stroke="#b3a98d" strokeWidth="1" strokeLinecap="round" />
-        {/* moustache over a mouth set in a hard, disapproving line */}
-        <path d="M30.5 58.5 Q34 61.5 38 60 Q42 61.5 45.5 58.5" fill="none" stroke="#c9c0a6" strokeWidth="2.6" strokeLinecap="round" />
-        <path d="M34.5 63.5 L41.5 63.5" stroke="#6d6450" strokeWidth="1.4" strokeLinecap="round" />
+        {/* moustache over a mouth set in a hard, disapproving line —
+            it bristles when he is poked */}
+        <path
+          d={cross ? "M30 57.5 Q34 62 38 59.5 Q42 62 46 57.5" : "M30.5 58.5 Q34 61.5 38 60 Q42 61.5 45.5 58.5"}
+          fill="none" stroke="#c9c0a6" strokeWidth="2.6" strokeLinecap="round"
+        />
+        {cross ? (
+          <path d="M34.5 64.5 Q38 62.8 41.5 64.5" fill="none" stroke="#6d6450" strokeWidth="1.4" strokeLinecap="round" />
+        ) : (
+          <path d="M34.5 63.5 L41.5 63.5" stroke="#6d6450" strokeWidth="1.4" strokeLinecap="round" />
+        )}
       </g>
     </svg>
   );
@@ -177,20 +222,22 @@ export function AndrewGlowbug({
   rights?: number;
 }) {
   const { motionOK } = useSettings();
-  const [spot, setSpot] = useState<Spot>(() => ({ x: 24, y: window.innerHeight - 200, left: true }));
   const [line, setLine] = useState<string | null>(GREETING);
-  const [judging, setJudging] = useState(false);
+  const [mood, setMood] = useState<Mood>("calm");
+  /** bumps on every poke so the shake keyframes replay */
+  const [pokeTick, setPokeTick] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastLineRef = useRef(-1);
   const prevMissesRef = useRef(misses);
+  const pokesRef = useRef(0);
 
-  const say = (text: string, judge: boolean) => {
+  const say = (text: string, m: Mood) => {
     clearTimeout(timerRef.current);
     setLine(text);
-    setJudging(judge);
+    setMood(m);
     timerRef.current = setTimeout(() => {
       setLine(null);
-      setJudging(false);
+      setMood("calm");
     }, BUBBLE_MS);
   };
 
@@ -206,64 +253,55 @@ export function AndrewGlowbug({
       let i = Math.floor(Math.random() * JUDGE_LINES.length);
       if (i === lastLineRef.current) i = (i + 1) % JUDGE_LINES.length;
       lastLineRef.current = i;
-      say(JUDGE_LINES[i], true);
+      say(JUDGE_LINES[i], "judging");
     }
     prevMissesRef.current = misses;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [misses]);
 
   /* right answers get, at most, a withering acknowledgement */
   const prevRightsRef = useRef(rights);
   useEffect(() => {
     if (rights > prevRightsRef.current && Math.random() < 0.35) {
-      say(BEGRUDGING_LINES[Math.floor(Math.random() * BEGRUDGING_LINES.length)], true);
+      say(BEGRUDGING_LINES[Math.floor(Math.random() * BEGRUDGING_LINES.length)], "judging");
     }
     prevRightsRef.current = rights;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rights]);
 
   /* a kindly word when a fresh round begins */
   useEffect(() => {
-    if (playing) say("Fifteen questions. I shall be observing. Closely.", false);
+    if (playing) say("Fifteen questions. I shall be observing. Closely.", "calm");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing]);
 
-  /* He stands still. Roughly every two minutes he glides — slowly, with
-     dignity — to another patch of empty margin, and resumes standing still. */
-  const driftTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const scheduleDrift = () => {
-    clearTimeout(driftTimerRef.current);
-    driftTimerRef.current = setTimeout(
-      () => setSpot(pickSpot()),
-      STAND_STILL_MS + Math.random() * STAND_STILL_JITTER_MS,
-    );
+  /* poking the guardian: each tap earns a crosser face and a crosser line */
+  const poke = () => {
+    const i = Math.min(pokesRef.current, POKE_LINES.length - 1);
+    pokesRef.current += 1;
+    setPokeTick((t) => t + 1);
+    say(POKE_LINES[i], "cross");
   };
 
-  useEffect(() => {
-    if (motionOK) scheduleDrift();
-    return () => clearTimeout(driftTimerRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [motionOK]);
-
   return (
-    <motion.div
-      className="pointer-events-none fixed left-0 top-0 z-30 hidden lg:block"
-      initial={false}
-      animate={motionOK ? { x: spot.x, y: spot.y } : { x: 16, y: window.innerHeight - 190 }}
-      transition={{ duration: motionOK ? GLIDE_SECONDS : 0, ease: "easeInOut" }}
-      onAnimationComplete={motionOK ? scheduleDrift : undefined}
-      aria-hidden={line === null}
-    >
-      <motion.div
-        className="relative h-28 w-24"
-        animate={
-          motionOK
-            ? judging
-              ? { y: 0, rotate: -4, scale: 1.05 }
-              : { y: [0, -3, 0], rotate: 0, scale: 1, transition: { duration: 5.5, repeat: Infinity, ease: "easeInOut" } }
-            : undefined
-        }
-        style={{ transformOrigin: "50% 85%" }}
+    <div className="relative w-20 shrink-0 self-start sm:w-24">
+      <motion.button
+        type="button"
+        onClick={poke}
+        whileTap={motionOK ? { scale: 0.94 } : undefined}
+        aria-label="Andrew Glowbug, guardian of the vault — best left unpoked"
+        className="block h-24 w-full cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 sm:h-28"
       >
-        <Worm judging={judging} />
-      </motion.div>
+        <motion.div
+          key={`${mood}-${pokeTick}`}
+          className="h-full w-full"
+          initial={false}
+          animate={motionOK ? BODY_ANIM[mood] : undefined}
+          style={{ transformOrigin: "50% 85%" }}
+        >
+          <Worm mood={mood} />
+        </motion.div>
+      </motion.button>
 
       <AnimatePresence>
         {line && (
@@ -273,15 +311,13 @@ export function AndrewGlowbug({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.3, ease: EASE }}
-            className={`qa-card absolute top-1 w-52 rounded-2xl px-3.5 py-2.5 text-sm italic leading-snug shadow-md ${
-              spot.left ? "left-full ml-2 rounded-bl-sm" : "right-full mr-2 rounded-br-sm"
-            }`}
+            className="qa-card absolute left-full top-0 z-20 ml-2 w-48 rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm italic leading-snug shadow-md"
             aria-live="polite"
           >
             {line}
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

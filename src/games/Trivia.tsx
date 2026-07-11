@@ -320,7 +320,6 @@ export function TriviaGame({ api }: { api: GameApi }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <AndrewGlowbug playing misses={misses} rights={correct} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs font-bold uppercase tracking-widest qa-muted">
           Question {index + 1} of {questions.length} · {points.toLocaleString()} pts
@@ -365,14 +364,16 @@ export function TriviaGame({ api }: { api: GameApi }) {
         </div>
       )}
 
-      <AnimatePresence mode="wait">
+      <div className="flex items-start gap-3">
+        <AndrewGlowbug playing misses={misses} rights={correct} />
+        <AnimatePresence mode="wait">
         <motion.div
           key={`${index}:${q.q}`}
           initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="flex flex-col gap-4"
+          className="flex min-w-0 flex-1 flex-col gap-4"
         >
           <div className="qa-card grain rounded-2xl p-5">
             <p className="font-display text-lg font-semibold leading-relaxed sm:text-xl">{q.q}</p>
@@ -442,7 +443,8 @@ export function TriviaGame({ api }: { api: GameApi }) {
             </motion.div>
           )}
         </motion.div>
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
 
       <p className="text-xs qa-muted">
         {MODES.find((m) => m.id === setup.mode)?.name} mode ·{" "}
