@@ -6,12 +6,11 @@ import { hashSeed } from "../lib/random";
 import { todayKey, prettyDate } from "../lib/date";
 import {
   dailyEntryFor,
-  recordResult,
-  setDailyCompletion,
   reportItem,
   loadStats,
   effectiveStreak,
 } from "../lib/storage";
+import { recordResult, setDailyCompletion } from "../lib/repo";
 import { copyShareText } from "../lib/flagship";
 import { useSettings } from "../context/SettingsContext";
 import { Button, Chip } from "./ui";

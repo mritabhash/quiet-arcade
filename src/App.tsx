@@ -19,6 +19,8 @@ import { SettingsPage } from "./pages/Settings";
 import { LorePage } from "./pages/Lore";
 import { NotFoundPage } from "./pages/NotFound";
 import { GamePage } from "./pages/GamePage";
+import { AccountPage } from "./pages/Account";
+import { LeaderboardPage } from "./pages/Leaderboard";
 
 function Page({ children }: { children: React.ReactNode }) {
   return (
@@ -85,6 +87,8 @@ export default function App() {
             <Route path="/games" element={<Page><GamesPage /></Page>} />
             <Route path="/games/:gameId" element={<Page><GamePage /></Page>} />
             <Route path="/stats" element={<Page><StatsPage /></Page>} />
+            <Route path="/leaderboards" element={<Page><LeaderboardPage /></Page>} />
+            <Route path="/account" element={<Page><AccountPage /></Page>} />
             <Route path="/lore" element={<Page><LorePage /></Page>} />
             <Route path="/settings" element={<Page><SettingsPage /></Page>} />
             <Route path="*" element={<Page><NotFoundPage /></Page>} />

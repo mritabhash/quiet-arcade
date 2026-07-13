@@ -7,8 +7,10 @@ const LINKS = [
   { to: "/", label: "Home" },
   { to: "/games", label: "Games" },
   { to: "/stats", label: "Stats" },
+  { to: "/leaderboards", label: "Ranks" },
   { to: "/lore", label: "Lore" },
   { to: "/settings", label: "Settings" },
+  { to: "/account", label: "Account" },
 ];
 
 export function Nav() {

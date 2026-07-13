@@ -7,6 +7,7 @@ import type {
   Stats,
 } from "../types";
 import { todayKey, yesterdayKeyOf } from "./date";
+import { track } from "./analytics";
 
 export const STORAGE_KEYS = {
   settings: "quietArcade.settings",
@@ -116,6 +117,7 @@ export function recordResult(
   }
 
   write(STORAGE_KEYS.stats, stats);
+  track("game_finished", { game_id: gameId, mode, score, max, perfect });
   return stats;
 }
 

@@ -9,7 +9,9 @@ import {
 } from "react";
 import { MotionConfig } from "framer-motion";
 import type { Settings } from "../types";
-import { loadSettings, saveSettings } from "../lib/storage";
+import { loadSettings } from "../lib/storage";
+import { saveSettings } from "../lib/repo";
+import { SYNC_EVENT } from "../lib/sync";
 
 interface SettingsContextValue {
   settings: Settings;
@@ -35,6 +37,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const onChange = () => setSystemReduced(mq.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // account sync may merge server settings into localStorage — pick them up
+  useEffect(() => {
+    const onSync = () => setSettings(loadSettings());
+    window.addEventListener(SYNC_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_EVENT, onSync);
   }, []);
 
   useEffect(() => {

@@ -9,7 +9,7 @@ import { read, write } from "./storage";
  * of the arcade.
  */
 
-const KEY = "quietArcade.flagshipStats";
+export const FLAGSHIP_KEY = "quietArcade.flagshipStats";
 /** how many recently played puzzle ids we remember per game */
 const RECENT_CAP = 40;
 
@@ -28,7 +28,7 @@ const EMPTY: FlagshipGameStats = {
 };
 
 export function loadFlagshipStats(): FlagshipStats {
-  return read<FlagshipStats>(KEY, {});
+  return read<FlagshipStats>(FLAGSHIP_KEY, {});
 }
 
 export function flagshipStatsFor(gameId: GameId): FlagshipGameStats {
@@ -36,7 +36,7 @@ export function flagshipStatsFor(gameId: GameId): FlagshipGameStats {
 }
 
 function save(all: FlagshipStats): void {
-  write(KEY, all);
+  write(FLAGSHIP_KEY, all);
 }
 
 export function recordFlagshipRound(

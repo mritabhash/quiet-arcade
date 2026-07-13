@@ -5,9 +5,9 @@ import { GAMES, GAME_INDEX } from "../data/games";
 import {
   loadStats,
   loadDailyCompletions,
-  resetStats,
   effectiveStreak,
 } from "../lib/storage";
+import { resetStats } from "../lib/repo";
 import { todayKey, prettyDate } from "../lib/date";
 import { flagshipStatsFor } from "../lib/flagship";
 import type { GameId } from "../types";
