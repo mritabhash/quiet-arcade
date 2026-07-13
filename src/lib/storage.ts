@@ -150,10 +150,19 @@ export function dailyEntryFor(gameId: GameId, dateKey: string): DailyEntry | und
   return loadDailyCompletions()[dateKey]?.[gameId];
 }
 
+/** Fired on window whenever a daily is completed, so UI (e.g. the per-game
+ * leaderboard) can unlock live without polling localStorage. */
+export const DAILY_COMPLETED_EVENT = "quietArcade:dailyCompleted";
+
 export function setDailyCompletion(gameId: GameId, dateKey: string, entry: DailyEntry): void {
   const all = loadDailyCompletions();
   all[dateKey] = { ...all[dateKey], [gameId]: entry };
   write(STORAGE_KEYS.dailyCompletions, all);
+  try {
+    window.dispatchEvent(new CustomEvent(DAILY_COMPLETED_EVENT, { detail: { gameId, dateKey } }));
+  } catch {
+    /* non-browser environments */
+  }
 }
 
 export function completedTodayCount(): number {

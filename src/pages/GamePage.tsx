@@ -2,6 +2,7 @@ import { useParams, Navigate, Link } from "react-router-dom";
 import type { GameApi, GameId } from "../types";
 import { GAME_INDEX } from "../data/games";
 import { GameShell } from "../components/GameShell";
+import { GameLeaderboard } from "../components/GameLeaderboard";
 import { ArcaneBackdrop } from "../components/ArcaneBackdrop";
 import { todayKey } from "../lib/date";
 import { WordGridGame } from "../games/WordGrid";
@@ -59,6 +60,7 @@ export function GamePage() {
         </Link>
       </div>
       <GameShell meta={meta}>{(api) => <Component api={api} />}</GameShell>
+      <GameLeaderboard gameId={meta.id} />
     </div>
   );
 }
