@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { COUNTRY_PATHS } from "../data/worldCountries";
+import { getGlobeMapGeometry } from "../data/globeMap50m";
+import {
+  getGlobeMinimumCameraDistance,
+  getGlobeTextureSpec,
+  isGlobeTextureMemoryConstrained,
+} from "../lib/globeTextureQuality";
 
 /**
  * A rotatable 3D globe (Three.js) used by Map Drop's easy mode — the
- * MapTap-style "tap where this is" game. The Earth texture is painted from the
- * app's own Natural Earth country outlines (COUNTRY_PATHS, equirectangular
- * x = lon + 180, y = 90 - lat), so no external map image is needed.
+ * MapTap-style "tap where this is" game. The Earth texture is painted locally
+ * from Natural Earth's 1:50m country/coast vectors, so it remains deterministic
+ * and does not depend on an external tile server.
  *
  * Placement is a tap, not a drag: a short press without much travel raycasts
  * onto the sphere and reports the lat/lon. A longer drag spins the globe. When
@@ -48,34 +53,104 @@ function vec3ToLatLon(p: THREE.Vector3): LatLon {
   return { lat, lon };
 }
 
-/** Paint the land texture from COUNTRY_PATHS once, then reuse it. */
-let cachedTexture: THREE.CanvasTexture | null = null;
-function landTexture(): THREE.CanvasTexture {
-  if (cachedTexture) return cachedTexture;
-  const W = 2048;
-  const H = 1024;
-  const cv = document.createElement("canvas");
-  cv.width = W;
-  cv.height = H;
-  const ctx = cv.getContext("2d")!;
-  ctx.fillStyle = OCEAN;
-  ctx.fillRect(0, 0, W, H);
-  ctx.save();
-  ctx.scale(W / 360, H / 180); // map units (0..360, 0..180) → canvas pixels
-  ctx.fillStyle = LAND;
-  ctx.strokeStyle = LAND_LINE;
-  ctx.lineWidth = 0.3;
-  ctx.lineJoin = "round";
-  for (const d of COUNTRY_PATHS) {
-    const path = new Path2D(d);
-    ctx.fill(path, "evenodd");
-    ctx.stroke(path);
+/** Unwrap a geographic line, then paint the copies intersecting the map seam. */
+function traceWrappedLine(
+  ctx: CanvasRenderingContext2D,
+  coordinates: readonly (readonly [number, number])[],
+  close: boolean,
+): void {
+  if (coordinates.length === 0) return;
+  const unwrapped: [number, number][] = [];
+  let previousLongitude = coordinates[0][0];
+  let minLongitude = previousLongitude;
+  let maxLongitude = previousLongitude;
+  unwrapped.push([previousLongitude, coordinates[0][1]]);
+  for (let i = 1; i < coordinates.length; i++) {
+    let longitude = coordinates[i][0];
+    while (longitude - previousLongitude > 180) longitude -= 360;
+    while (longitude - previousLongitude < -180) longitude += 360;
+    unwrapped.push([longitude, coordinates[i][1]]);
+    previousLongitude = longitude;
+    minLongitude = Math.min(minLongitude, longitude);
+    maxLongitude = Math.max(maxLongitude, longitude);
   }
+
+  const firstCopy = Math.ceil((-180 - maxLongitude) / 360);
+  const lastCopy = Math.floor((180 - minLongitude) / 360);
+  for (let copy = firstCopy; copy <= lastCopy; copy++) {
+    const shift = copy * 360;
+    ctx.moveTo(unwrapped[0][0] + shift + 180, 90 - unwrapped[0][1]);
+    for (let i = 1; i < unwrapped.length; i++) {
+      ctx.lineTo(unwrapped[i][0] + shift + 180, 90 - unwrapped[i][1]);
+    }
+    if (close) ctx.closePath();
+  }
+}
+
+/** Paint an opaque high-resolution atlas for this mounted globe. */
+function landTexture(width: number, anisotropy: number): THREE.CanvasTexture {
+  const height = width / 2;
+  const cv = document.createElement("canvas");
+  cv.width = width;
+  cv.height = height;
+  const ctx = cv.getContext("2d", { alpha: false });
+  if (!ctx) throw new Error(`Could not allocate ${width}x${height} globe atlas`);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.fillStyle = OCEAN;
+  ctx.fillRect(0, 0, width, height);
+  ctx.save();
+  ctx.scale(width / 360, height / 180);
+
+  const { landRings, borderLines } = getGlobeMapGeometry();
+  ctx.fillStyle = LAND;
+  ctx.beginPath();
+  for (const ring of landRings) traceWrappedLine(ctx, ring, true);
+  ctx.fill("evenodd");
+
+  ctx.strokeStyle = LAND_LINE;
+  // Two source texels: readable when distant, still crisp at maximum zoom.
+  ctx.lineWidth = 720 / width;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  for (const line of borderLines) traceWrappedLine(ctx, line, false);
+  ctx.stroke();
   ctx.restore();
-  const tex = new THREE.CanvasTexture(cv);
+
+  const tex = new THREE.CanvasTexture(
+    cv,
+    THREE.UVMapping,
+    THREE.RepeatWrapping,
+    THREE.ClampToEdgeWrapping,
+    THREE.LinearFilter,
+    THREE.LinearMipmapLinearFilter,
+    THREE.RGBAFormat,
+    THREE.UnsignedByteType,
+    anisotropy,
+  );
+  tex.name = `Natural Earth 50m ${width}x${height}`;
   tex.colorSpace = THREE.SRGBColorSpace;
-  cachedTexture = tex;
+  tex.generateMipmaps = true;
   return tex;
+}
+
+/** If a large canvas allocation is rejected, retry at the next safe tier. */
+function landTextureWithFallback(
+  preferredWidth: number,
+  anisotropy: number,
+): { texture: THREE.CanvasTexture; width: number } {
+  let width = preferredWidth;
+  let lastError: unknown;
+  while (width >= 2) {
+    try {
+      return { texture: landTexture(width, anisotropy), width };
+    } catch (error) {
+      lastError = error;
+      width = Math.floor(width / 2);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Could not allocate globe atlas");
 }
 
 function makePin(color: string): THREE.Mesh {
@@ -201,6 +276,7 @@ export function GlobeCanvas({
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     mount.appendChild(renderer.domElement);
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
@@ -208,9 +284,28 @@ export function GlobeCanvas({
     renderer.domElement.style.touchAction = "none";
     rendererRef.current = renderer;
 
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    const memoryConstrained = isGlobeTextureMemoryConstrained(
+      window.matchMedia?.("(pointer: coarse)").matches ?? false,
+      deviceMemory,
+    );
+    const preferredTextureSpec = getGlobeTextureSpec(
+      renderer.capabilities.maxTextureSize,
+      memoryConstrained,
+    );
+    const allocatedTexture = landTextureWithFallback(
+      preferredTextureSpec.width,
+      Math.max(1, renderer.capabilities.getMaxAnisotropy()),
+    );
+    const texture = allocatedTexture.texture;
+    const textureSpec = {
+      width: allocatedTexture.width,
+      height: allocatedTexture.width / 2,
+    };
+
     const globe = new THREE.Mesh(
-      new THREE.SphereGeometry(R, 64, 64),
-      new THREE.MeshBasicMaterial({ map: landTexture() }),
+      new THREE.SphereGeometry(R, 128, 96),
+      new THREE.MeshBasicMaterial({ map: texture }),
     );
     globe.rotation.y = -Math.PI / 2; // start looking at the Atlantic/Africa
     scene.add(globe);
@@ -220,36 +315,61 @@ export function GlobeCanvas({
     globe.add(overlay); // pins/arc ride along with the globe's rotation
     overlayRef.current = overlay;
 
+    // ---- zoom: dolly the camera along its z axis ---------------------------
+    const ABSOLUTE_MIN_DIST = 1.45; // geometry safety floor (R = 1)
+    const MAX_DIST = 4.5; // farthest — the whole globe with a margin
+    let minDist = ABSOLUTE_MIN_DIST;
+    let dist = 3;
+    const applyZoom = (next: number) => {
+      dist = Math.min(MAX_DIST, Math.max(minDist, next));
+      camera.position.z = dist;
+    };
+    zoomByRef.current = (factor: number) => applyZoom(dist * factor);
+
     const resize = () => {
       const w = mount.clientWidth || 1;
       const h = mount.clientHeight || 1;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      // Do not let zoom magnify a map texel beyond roughly one screen pixel.
+      minDist = Math.min(
+        MAX_DIST,
+        Math.max(
+          ABSOLUTE_MIN_DIST,
+          getGlobeMinimumCameraDistance({
+            textureWidth: textureSpec.width,
+            viewportHeight: h,
+            pixelRatio: renderer.getPixelRatio(),
+            verticalFovDegrees: camera.fov,
+            radius: R,
+          }),
+        ),
+      );
+      applyZoom(dist);
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(mount);
 
-    // ---- zoom: dolly the camera along its z axis ---------------------------
-    const MIN_DIST = 1.45; // closest before clipping the sphere (R = 1)
-    const MAX_DIST = 4.5; // farthest — the whole globe with a margin
-    let dist = 3;
-    const applyZoom = (next: number) => {
-      dist = Math.min(MAX_DIST, Math.max(MIN_DIST, next));
-      camera.position.z = dist;
-    };
-    zoomByRef.current = (factor: number) => applyZoom(dist * factor);
-
     // ---- pointer: tap vs. drag vs. two-finger pinch ------------------------
     const raycaster = new THREE.Raycaster();
     const pointers = new Map<number, { x: number; y: number }>();
+    let contextLost = false;
     let moved = 0;
     let didPinch = false;
     let pinchStartGap = 0;
     let pinchStartDist = 0;
     let last = { x: 0, y: 0 };
     const el = renderer.domElement;
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      contextLost = true;
+    };
+    const onContextRestored = () => {
+      contextLost = false;
+      texture.needsUpdate = true;
+    };
     const gap = () => {
       const [a, b] = [...pointers.values()];
       return Math.hypot(a.x - b.x, a.y - b.y);
@@ -327,6 +447,8 @@ export function GlobeCanvas({
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
+    el.addEventListener("webglcontextlost", onContextLost);
+    el.addEventListener("webglcontextrestored", onContextRestored);
     zone.addEventListener("wheel", onWheel, { passive: false });
 
     let raf = 0;
@@ -335,7 +457,7 @@ export function GlobeCanvas({
       if (interactiveRef.current && pointers.size === 0 && !touchedRef.current) {
         globe.rotateY(0.0015);
       }
-      renderer.render(scene, camera);
+      if (!contextLost) renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
     };
     tick();
@@ -347,7 +469,10 @@ export function GlobeCanvas({
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
+      el.removeEventListener("webglcontextlost", onContextLost);
+      el.removeEventListener("webglcontextrestored", onContextRestored);
       zone.removeEventListener("wheel", onWheel);
+      texture.dispose();
       renderer.dispose();
       globe.geometry.dispose();
       (globe.material as THREE.Material).dispose();
