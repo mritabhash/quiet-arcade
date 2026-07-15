@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import type { GameApi } from "../types";
 import { rngFor, pickIndex } from "../lib/random";
 import { CITIES, distanceKm } from "../data/cities";
-import { MAP_DROP_PUZZLES } from "../data/mapDropPuzzles";
+import { MAP_DROP_PHOTO_PUZZLES, MAP_DROP_PUZZLES } from "../data/mapDropPuzzles";
 import { pickFreshIndex } from "../lib/flagship";
 import { recordFlagshipRound } from "../lib/repo";
 import { GlobeCanvas } from "../components/GlobeCanvas";
@@ -24,7 +24,9 @@ const MAX_SCORE = 5000;
 const MODERATE_MAX_SCORE = 4000;
 const MODERATE_IMG_COST = 150;
 const MODERATE_MAX_IMAGES = 5;
-const MODERATE_MIN_IMAGES = 3;
+// Moderate promises five separate photo clues; an incomplete/diversity-thin
+// result blocks the round and offers a retry instead of counting repeats.
+const MODERATE_MIN_IMAGES = MODERATE_MAX_IMAGES;
 /** Easy mode: three famous facts are free; three closer looks cost a flat fee each. */
 const EASY_MAX_SCORE = 3000;
 const EASY_HINT_COST = 200;
@@ -83,31 +85,44 @@ interface Outcome {
 }
 
 export function MapDropGame({ api }: { api: GameApi }) {
+  const versusDifficulty = api.versus
+    ? (api.versus.config as { difficulty?: Difficulty }).difficulty
+    : undefined;
+  const [difficulty, setDifficulty] = useState<Difficulty>(
+    () => versusDifficulty ?? readDifficulty(),
+  );
+  // Keep the round's puzzle stable when a solo player tries another difficulty.
+  // Rounds that start in photo mode use the curated city pool so a versus match
+  // cannot select a generated location with genuinely thin image coverage.
+  const initialDifficulty = useRef(difficulty).current;
+  const puzzlePool =
+    initialDifficulty === "moderate" ? MAP_DROP_PHOTO_PUZZLES : MAP_DROP_PUZZLES;
   const place = useMemo(() => {
     const rng = rngFor([api.seed]);
     // daily stays purely date-deterministic; free play skips recent rounds
     if (api.mode === "daily") {
-      return MAP_DROP_PUZZLES[pickIndex(rng, MAP_DROP_PUZZLES.length)];
+      return puzzlePool[pickIndex(rng, puzzlePool.length)];
     }
-    const ids = MAP_DROP_PUZZLES.map((p) => p.id);
-    return MAP_DROP_PUZZLES[pickFreshIndex("map-drop", ids, rng)];
-  }, [api.seed, api.mode]);
+    const ids = puzzlePool.map((p) => p.id);
+    return puzzlePool[pickFreshIndex("map-drop", ids, rng)];
+  }, [api.seed, api.mode, puzzlePool]);
 
   const easyFree = useMemo(() => easyFreeHintsFor(place, api.seed), [place, api.seed]);
-  const [difficulty, setDifficulty] = useState<Difficulty>(readDifficulty);
   // Moderate is a photo round fetched from Wikimedia Commons: images === null
   // while loading, imagesFailed when the spot lacks enough usable pictures.
   const [images, setImages] = useState<PlaceImage[] | null>(null);
   const [imagesFailed, setImagesFailed] = useState(false);
+  const [photoAttempt, setPhotoAttempt] = useState(0);
   const [zoomImg, setZoomImg] = useState<PlaceImage | null>(null);
-  // easy needs country data, moderate needs photos; either falling short → hard
+  // Easy can fall back to hard when its country data is missing. Moderate must
+  // wait for all five photos so its clue and scoring contract never changes.
   const eff: Difficulty =
-    (difficulty === "moderate" && imagesFailed) ||
-    (difficulty === "easy" && easyFree === null)
-      ? "hard"
-      : difficulty;
-  const moderateReady = difficulty === "moderate" && !imagesFailed && images !== null;
+    difficulty === "easy" && easyFree === null ? "hard" : difficulty;
+  const moderateReady =
+    difficulty === "moderate" && images?.length === MODERATE_MAX_IMAGES;
   const moderateLoading = difficulty === "moderate" && !imagesFailed && images === null;
+  const moderateUnavailable = difficulty === "moderate" && imagesFailed;
+  const roundReady = difficulty !== "moderate" || moderateReady;
 
   // novice/moderate/hard all reveal one at a time; easy is delegated to MapTapEasy
   const [revealed, setRevealed] = useState(1);
@@ -144,7 +159,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
     fetchPlaceImages(place, MODERATE_MAX_IMAGES, ctrl.signal)
       .then((list) => {
         if (cancelled) return;
-        if (list.length >= MODERATE_MIN_IMAGES) setImages(list);
+        if (list.length === MODERATE_MIN_IMAGES) setImages(list);
         else setImagesFailed(true);
       })
       .catch(() => {
@@ -154,7 +169,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
       cancelled = true;
       ctrl.abort();
     };
-  }, [difficulty, place]);
+  }, [difficulty, place, photoAttempt]);
 
   const imageCount = images?.length ?? 0;
   const totalHints =
@@ -189,6 +204,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
   const modeLabel = difficulty[0].toUpperCase() + difficulty.slice(1);
 
   const switchDifficulty = (d: Difficulty) => {
+    if (api.versus) return; // config is fixed for a match
     if (d === difficulty || outcome) return;
     setDifficulty(d);
     write(DIFFICULTY_KEY, d);
@@ -243,14 +259,16 @@ export function MapDropGame({ api }: { api: GameApi }) {
 
   const finishRound = () => {
     if (!outcome) return;
-    recordFlagshipRound("map-drop", api.mode, {
-      score: outcome.score,
-      max: maxScore,
-      won: outcome.dist <= 600,
-      perfect: outcome.score === maxScore,
-      hintsUsed: revealed,
-      puzzleId: place.id,
-    });
+    if (!api.versus) {
+      recordFlagshipRound("map-drop", api.mode, {
+        score: outcome.score,
+        max: maxScore,
+        won: outcome.dist <= 600,
+        perfect: outcome.score === maxScore,
+        hintsUsed: revealed,
+        puzzleId: place.id,
+      });
+    }
     api.finish({
       score: outcome.score,
       max: maxScore,
@@ -363,27 +381,29 @@ export function MapDropGame({ api }: { api: GameApi }) {
           </h2>
         </div>
         <div className="flex items-center gap-3">
-          <div
-            className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1"
-            role="tablist"
-            aria-label="Hint difficulty"
-          >
-            {DIFFICULTIES.map((d) => (
-              <button
-                key={d}
-                role="tab"
-                aria-selected={difficulty === d}
-                onClick={() => switchDifficulty(d)}
-                className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
-                  difficulty === d
-                    ? "bg-[var(--card-2)] text-[var(--ink)]"
-                    : "qa-muted hover:text-[var(--ink)]"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
+          {!api.versus && (
+            <div
+              className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1"
+              role="tablist"
+              aria-label="Hint difficulty"
+            >
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d}
+                  role="tab"
+                  aria-selected={difficulty === d}
+                  onClick={() => switchDifficulty(d)}
+                  className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
+                    difficulty === d
+                      ? "bg-[var(--card-2)] text-[var(--ink)]"
+                      : "qa-muted hover:text-[var(--ink)]"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="text-right">
             <p className="font-display text-2xl font-semibold">
               {ceiling.toLocaleString()}
@@ -392,7 +412,9 @@ export function MapDropGame({ api }: { api: GameApi }) {
             <p className="text-xs qa-muted">
               {moderateLoading
                 ? "Finding photos…"
-                : `${revealed} / ${totalHints} ${moderateReady ? "photos" : "hints"}`}
+                : moderateUnavailable
+                  ? "Photos unavailable"
+                  : `${revealed} / ${totalHints} ${moderateReady ? "photos" : "hints"}`}
             </p>
           </div>
         </div>
@@ -406,6 +428,26 @@ export function MapDropGame({ api }: { api: GameApi }) {
               <p className="text-xs qa-muted">
                 Fetching real photos taken near this place…
               </p>
+            </div>
+          ) : moderateUnavailable ? (
+            <div
+              className="qa-card flex flex-col items-start gap-3 rounded-2xl px-4 py-4"
+              role="alert"
+            >
+              <div>
+                <p className="text-sm font-semibold">Five distinct photos are required</p>
+                <p className="mt-1 text-xs leading-snug qa-muted">
+                  This photo set could not be completed. Retry to keep the same
+                  Moderate clues and scoring rules{api.versus ? " for this match" : ""}.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                className="px-4 py-1.5 text-sm"
+                onClick={() => setPhotoAttempt((attempt) => attempt + 1)}
+              >
+                Retry photos
+              </Button>
             </div>
           ) : moderateReady ? (
             <div className="flex flex-col gap-2.5" aria-live="polite">
@@ -476,6 +518,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
           )}
 
           {!moderateLoading &&
+            !moderateUnavailable &&
             (revealed < totalHints ? (
               <button
                 onClick={revealHint}
@@ -517,7 +560,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
           <div className="relative overflow-hidden rounded-3xl border border-[var(--line)] bg-[#0b2731]">
             <GlobeCanvas
               className="h-[380px] w-full sm:h-[440px]"
-              interactive={!outcome}
+              interactive={!outcome && roundReady}
               ariaLabel="Interactive globe. Drag or use arrow keys to aim the centre reticle, then tap or press Enter to drop your guess. Scroll, pinch, or the plus and minus keys zoom."
               onTap={(lat, lon) => {
                 setPin({ x: lon + 180, y: 90 - lat });
@@ -526,7 +569,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
               guess={pin ? { lat: 90 - pin.y, lon: pin.x - 180 } : null}
               answer={null}
             />
-            {!pin && (
+            {!pin && roundReady && (
               <p className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-4 py-3 text-center text-sm font-medium text-sand-50">
                 Drag or arrow-key to spin · scroll or pinch to zoom · tap or Enter to drop
               </p>
@@ -534,13 +577,19 @@ export function MapDropGame({ api }: { api: GameApi }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button onClick={confirmDrop} disabled={!pin}>
+            <Button onClick={confirmDrop} disabled={!pin || !roundReady}>
               Confirm drop
             </Button>
             <p className="text-xs leading-snug qa-muted">
-              {pin
-                ? "Tap again to move your guess, then confirm. Closer keeps more points."
-                : "Drag to spin the globe, then tap to drop your pin."}
+              {!roundReady
+                ? moderateLoading
+                  ? "Waiting for five distinct photo clues…"
+                  : api.versus
+                    ? "Retry the photo set to continue this match."
+                    : "Retry the photo set, or choose another difficulty."
+                : pin
+                  ? "Tap again to move your guess, then confirm. Closer keeps more points."
+                  : "Drag to spin the globe, then tap to drop your pin."}
             </p>
           </div>
         </div>
@@ -559,4 +608,3 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-

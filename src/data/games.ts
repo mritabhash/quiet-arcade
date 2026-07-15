@@ -14,8 +14,8 @@ export const GAMES: GameMeta[] = [
     flagship: true,
     freePlayLabel: "Play another Map Drop",
     howTo: [
-      "Pick a difficulty: Novice tells you the place's name outright — you just have to find it; Easy opens with three famous facts anyone might know; Moderate opens with three country hints — flag, language, fact; Hard deals seven cryptic hints one at a time.",
-      "Extra hints lower the round's ceiling — on Novice one 2,000-point reveal says where it sits; closer looks cost a flat 200 points on Easy and 600 on Moderate; on Hard every reveal drops it.",
+      "Pick a difficulty: Novice tells you the place's name outright — you just have to find it; Easy opens with three famous facts anyone might know; Moderate deals five distinct photo clues; Hard deals seven cryptic hints one at a time.",
+      "Extra clues lower the round's ceiling — on Novice one 2,000-point reveal says where it sits; closer looks cost 200 points on Easy and each extra photo costs 150 on Moderate; on Hard every reveal drops it.",
       "Click or drag on the map to place your pin, then press Confirm drop.",
       "Closer pins keep more points: within 25 km is a bullseye, and any pin under 1,500 km always banks at least a tenth of the ceiling.",
     ],

@@ -95,3 +95,5 @@ activates when the env vars below are present.
   so there's no per-user storage policy surface at all.
 - **Score caps** in `game_catalog` are deliberately generous; tighten them in
   the dashboard if cheating ever becomes a nuisance.
+
+- Run `migrations/0002_versus.sql`, then `supabase/tests/versus_isolation_tests.sql` to confirm Versus RLS (expects `ALL VERSUS TESTS PASSED`).

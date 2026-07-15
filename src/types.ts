@@ -1,3 +1,5 @@
+import type { VersusConfig, VersusProgress } from "./lib/versus/types";
+
 export type GameId =
   | "map-drop"
   | "time-capsule"
@@ -44,6 +46,15 @@ export interface GameResult {
   share?: string[];
 }
 
+export interface VersusHooks {
+  /** the shared, both-players-identical match config */
+  config: VersusConfig;
+  /** which side the local player is */
+  role: "host" | "guest";
+  /** live update to broadcast (no-op until the realtime pillar wires it up) */
+  onProgress: (p: VersusProgress) => void;
+}
+
 export interface GameApi {
   seed: number;
   mode: Mode;
@@ -52,6 +63,8 @@ export interface GameApi {
   finish: (result: GameResult) => void;
   /** reset the shell for a fresh round immediately (practice flows) */
   playAgain?: () => void;
+  /** present only in a Versus match; single-player leaves it undefined */
+  versus?: VersusHooks;
 }
 
 export interface Settings {

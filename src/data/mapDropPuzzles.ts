@@ -254,6 +254,11 @@ const NEW_PLACES: MapDropPuzzle[] = [
 /** hand-written tier */
 const CURATED: MapDropPuzzle[] = [...LEGACY, ...NEW_PLACES];
 
+/** City rounds with curated coordinates/articles, used by the live photo mode. */
+export const MAP_DROP_PHOTO_PUZZLES: MapDropPuzzle[] = CURATED.filter(
+  (puzzle) => puzzle.kind === "city",
+);
+
 /** curated + generated gazetteer tier (1000+ hidden places) */
 export const MAP_DROP_PUZZLES: MapDropPuzzle[] = [
   ...CURATED,
