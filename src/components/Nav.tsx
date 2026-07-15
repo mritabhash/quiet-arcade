@@ -9,6 +9,7 @@ const LINKS = [
   { to: "/stats", label: "Stats" },
   { to: "/leaderboards", label: "Ranks" },
   { to: "/lore", label: "Lore" },
+  { to: "/cast", label: "Cast" },
   { to: "/settings", label: "Settings" },
   { to: "/account", label: "Account" },
 ];

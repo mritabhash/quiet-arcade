@@ -70,7 +70,7 @@ const BODY_ANIM: Record<Mood, TargetAndTransition> = {
   },
 };
 
-function Worm({ mood }: { mood: Mood }) {
+export function Worm({ mood }: { mood: Mood }) {
   const cross = mood === "cross";
   return (
     <svg viewBox="0 0 110 130" className="h-full w-full" role="img" aria-label="Andrew Glowbug, guardian of the vault">

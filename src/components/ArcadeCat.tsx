@@ -19,7 +19,7 @@ const STRIPE = "#ae4d2c";
 const CREAM = "#f7f1e0";
 const INK = "#1b1824";
 
-function CatArt({ pose }: { pose: Pose }) {
+export function CatArt({ pose }: { pose: Pose }) {
   switch (pose) {
     case "walk":
       return (

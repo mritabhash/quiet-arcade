@@ -4,6 +4,7 @@ import { GAMES } from "../data/games";
 import { GameCard } from "../components/GameCard";
 import { BlurReveal, Counter, EASE } from "../components/motion";
 import { KnightVigil } from "../components/KnightVigil";
+import { DailyRiddle } from "../components/DailyRiddle";
 import { ArcaneScene, useHeroParallax } from "../components/ArcaneScene";
 import { loadStats, loadDailyCompletions, effectiveStreak } from "../lib/storage";
 import { todayKey } from "../lib/date";
@@ -76,6 +77,9 @@ export function HomePage() {
           </svg>
         </motion.div>
       </section>
+
+      {/* RIDDLE OF THE DAY — one from the hundred, sworn to the date */}
+      <DailyRiddle />
 
       {/* THE KNIGHT'S VIGIL — the hall's resident, living her own hours */}
       <KnightVigil />

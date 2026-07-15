@@ -169,6 +169,34 @@ const CONFETTI = [
   { x: 74, y: 30, c: "#d19e34", d: 0.75 },
 ];
 
+/** The rabbit's static art for a given mood — reused by the Cast page. */
+export function RabbitArt({ mood }: { mood: RabbitMood }) {
+  return (
+    <svg viewBox="0 0 80 96" className="h-full w-full" role="img" aria-label={`Rabbit guide looking ${mood}`}>
+      {/* ears */}
+      <path d={EAR_LEFT[mood]} fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d={EAR_RIGHT[mood]} fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d={EAR_LEFT[mood]} fill="#d9a8a0" opacity="0.5" transform="translate(2 4) scale(0.82)" />
+      <path d={EAR_RIGHT[mood]} fill="#d9a8a0" opacity="0.5" transform="translate(4 4) scale(0.82)" />
+      {/* body */}
+      <ellipse cx="40" cy="74" rx="19" ry="16" fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.8" />
+      {/* belly */}
+      <ellipse cx="40" cy="78" rx="10" ry="8.5" fill="#f6efdd" />
+      {/* head */}
+      <circle cx="40" cy="48" r="15.5" fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.8" />
+      {/* cheeks */}
+      <circle cx="29" cy="53" r="2.6" fill="#d9a8a0" opacity="0.6" />
+      <circle cx="51" cy="53" r="2.6" fill="#d9a8a0" opacity="0.6" />
+      <Eyes mood={mood} />
+      <Mouth mood={mood} />
+      {/* feet */}
+      <ellipse cx="30" cy="88" rx="6" ry="3.4" fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.6" />
+      <ellipse cx="50" cy="88" rx="6" ry="3.4" fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.6" />
+      <Prop mood={mood} />
+    </svg>
+  );
+}
+
 export function RabbitGuide({ mood, line }: { mood: RabbitMood; line: string }) {
   const { motionOK } = useSettings();
 
@@ -193,28 +221,7 @@ export function RabbitGuide({ mood, line }: { mood: RabbitMood; line: string }) 
             ))}
           </div>
         )}
-        <svg viewBox="0 0 80 96" className="h-full w-full" role="img" aria-label={`Rabbit guide looking ${mood}`}>
-          {/* ears */}
-          <path d={EAR_LEFT[mood]} fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.8" strokeLinejoin="round" />
-          <path d={EAR_RIGHT[mood]} fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.8" strokeLinejoin="round" />
-          <path d={EAR_LEFT[mood]} fill="#d9a8a0" opacity="0.5" transform="translate(2 4) scale(0.82)" />
-          <path d={EAR_RIGHT[mood]} fill="#d9a8a0" opacity="0.5" transform="translate(4 4) scale(0.82)" />
-          {/* body */}
-          <ellipse cx="40" cy="74" rx="19" ry="16" fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.8" />
-          {/* belly */}
-          <ellipse cx="40" cy="78" rx="10" ry="8.5" fill="#f6efdd" />
-          {/* head */}
-          <circle cx="40" cy="48" r="15.5" fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.8" />
-          {/* cheeks */}
-          <circle cx="29" cy="53" r="2.6" fill="#d9a8a0" opacity="0.6" />
-          <circle cx="51" cy="53" r="2.6" fill="#d9a8a0" opacity="0.6" />
-          <Eyes mood={mood} />
-          <Mouth mood={mood} />
-          {/* feet */}
-          <ellipse cx="30" cy="88" rx="6" ry="3.4" fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.6" />
-          <ellipse cx="50" cy="88" rx="6" ry="3.4" fill="#e9dcc3" stroke="#3a2c22" strokeWidth="1.6" />
-          <Prop mood={mood} />
-        </svg>
+        <RabbitArt mood={mood} />
       </motion.div>
 
       <AnimatePresence mode="wait">

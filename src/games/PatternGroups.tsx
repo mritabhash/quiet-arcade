@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { GameApi } from "../types";
 import { mulberry32, pickIndex, shuffled } from "../lib/random";
 import { PATTERN_PUZZLES } from "../data/patternGroups";
+import { MOMO_LINES, momoLine } from "../data/maMomoLines";
+import { MaMomo, type MomoMood } from "../components/MaMomo";
 import { Button } from "../components/ui";
 import { EASE } from "../components/motion";
 
@@ -31,12 +33,34 @@ export function PatternGroupsGame({ api }: { api: GameApi }) {
   const [note, setNote] = useState<string | null>(null);
   const [shakeKey, setShakeKey] = useState(0);
   const [done, setDone] = useState(false);
+  const [momo, setMomo] = useState<{ mood: MomoMood; line: string }>(() => ({
+    mood: "watch",
+    line: momoLine(MOMO_LINES.greetings),
+  }));
+  const pokesRef = useRef(0);
 
   const wordGroup = useMemo(() => {
     const map: Record<string, number> = {};
     puzzle.groups.forEach((g, i) => g.words.forEach((w) => (map[w] = i)));
     return map;
   }, [puzzle]);
+
+  // Ma Momo notices when you drift off mid-lesson.
+  useEffect(() => {
+    if (done) return;
+    const t = setTimeout(() => {
+      setMomo({ mood: "watch", line: momoLine(MOMO_LINES.idle) });
+    }, 45000);
+    return () => clearTimeout(t);
+  }, [selected, solvedGroups, mistakes, done]);
+
+  const pokeMomo = () => {
+    const n = ++pokesRef.current;
+    const pool =
+      n <= 2 ? MOMO_LINES.poke1 : n <= 4 ? MOMO_LINES.poke2 : n <= 7 ? MOMO_LINES.poke3 : MOMO_LINES.poke4;
+    const mood: MomoMood = n <= 4 ? "annoyed" : n <= 7 ? "scold" : "stern";
+    setMomo({ mood, line: momoLine(pool) });
+  };
 
   const finishGame = (solvedCount: number, cleanly: boolean) => {
     if (done) return;
@@ -74,7 +98,18 @@ export function PatternGroupsGame({ api }: { api: GameApi }) {
       setTiles((t) => t.filter((w) => wordGroup[w] !== g));
       setSelected([]);
       setNote(null);
-      if (nextSolved.length === 4) finishGame(4, mistakes === 0);
+      if (nextSolved.length === 4) {
+        setMomo({
+          mood: "celebrate",
+          line: momoLine(mistakes === 0 ? MOMO_LINES.winPerfect : MOMO_LINES.win),
+        });
+        finishGame(4, mistakes === 0);
+      } else {
+        setMomo({
+          mood: "happy",
+          line: momoLine(nextSolved.length === 1 ? MOMO_LINES.solveFirst : MOMO_LINES.solve),
+        });
+      }
     } else {
       const counts = [0, 0, 0, 0];
       selected.forEach((w) => counts[wordGroup[w]]++);
@@ -83,6 +118,10 @@ export function PatternGroupsGame({ api }: { api: GameApi }) {
       setMistakes(nextMistakes);
       setNote(oneAway ? "So close — one tile is astray." : "Not a group. Breathe, look again.");
       setShakeKey((k) => k + 1);
+      if (nextMistakes >= 4) setMomo({ mood: "sad", line: momoLine(MOMO_LINES.loss) });
+      else if (nextMistakes === 3) setMomo({ mood: "stern", line: momoLine(MOMO_LINES.lastChance) });
+      else if (nextMistakes === 2) setMomo({ mood: "scold", line: momoLine(MOMO_LINES.scold) });
+      else setMomo({ mood: "gasp", line: momoLine(oneAway ? MOMO_LINES.oneAway : MOMO_LINES.gasp) });
       if (nextMistakes >= 4) {
         // reveal everything gently
         setSolvedGroups([0, 1, 2, 3]);
@@ -171,6 +210,8 @@ export function PatternGroupsGame({ api }: { api: GameApi }) {
       <p aria-live="polite" className="min-h-5 text-center text-sm font-semibold text-clay-600 dark:text-clay-300">
         {note}
       </p>
+
+      <MaMomo mood={momo.mood} line={momo.line} onPoke={pokeMomo} />
     </div>
   );
 }

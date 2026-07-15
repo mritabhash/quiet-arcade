@@ -236,7 +236,7 @@ const INK = "#2a2233";
 const HI = "#fff8ec"; // highlight overlay
 const LO = "#141020"; // shadow overlay
 
-function Knight({
+export function Knight({
   activity,
   seated,
   motionOK,
@@ -781,7 +781,7 @@ function SeatedBody({ activity, motionOK }: { activity: KnightActivity; motionOK
 /* ------------------------------------------------------- the old mage */
 
 /** The old mage — appears only for the duel, and gives as good as he gets. */
-function OldMage({ motionOK }: { motionOK: boolean }) {
+export function OldMage({ motionOK }: { motionOK: boolean }) {
   return (
     <motion.svg
       viewBox="0 0 160 190"

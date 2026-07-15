@@ -1,0 +1,123 @@
+/**
+ * The riddle ledger — 100 moderately hard riddles, one inscribed per day.
+ *
+ * Selection is deterministic from the date (days-since-epoch mod 100), so every
+ * visitor sees the same riddle on the same day, and no riddle repeats within a
+ * hundred days.
+ */
+
+export interface Riddle {
+  q: string;
+  a: string;
+}
+
+export const RIDDLES: Riddle[] = [
+  { q: "I speak without a mouth and hear without ears. I have no body, but I come alive with wind.", a: "An echo" },
+  { q: "The more you take, the more you leave behind.", a: "Footsteps" },
+  { q: "I am taken from a mine and shut in a wooden case, from which I am never released — yet almost everyone uses me.", a: "Pencil lead" },
+  { q: "What can travel around the world while staying in a corner?", a: "A postage stamp" },
+  { q: "I have cities but no houses, forests but no trees, and water but no fish.", a: "A map" },
+  { q: "What is so fragile that saying its name breaks it?", a: "Silence" },
+  { q: "The one who makes it has no need of it. The one who buys it has no use for it. The one who uses it can neither see nor feel it.", a: "A coffin" },
+  { q: "Feed me and I live. Give me a drink and I die.", a: "Fire" },
+  { q: "Forward I am heavy, but backward I am not.", a: "The word “ton”" },
+  { q: "What word is spelled incorrectly in every dictionary?", a: "“Incorrectly”" },
+  { q: "I am a five-letter word. Remove two letters, and one remains.", a: "Stone" },
+  { q: "What belongs to you, but other people use it more than you do?", a: "Your name" },
+  { q: "If you have me, you want to share me. If you share me, you no longer have me.", a: "A secret" },
+  { q: "I turn once, and what is out will not get in. I turn again, and what is in will not get out.", a: "A key" },
+  { q: "The poor have it. The rich need it. If you eat it, you die.", a: "Nothing" },
+  { q: "What is always on its way here, but never arrives?", a: "Tomorrow" },
+  { q: "What breaks yet never falls — and what falls yet never breaks?", a: "Day breaks and night falls" },
+  { q: "What invention lets you look right through a wall?", a: "A window" },
+  { q: "What can fill a room but takes up no space?", a: "Light" },
+  { q: "The more of me there is, the less you see.", a: "Darkness" },
+  { q: "I follow you by day and vanish by night, yet the sun is my maker.", a: "A shadow" },
+  { q: "What has a heart that doesn't beat?", a: "An artichoke" },
+  { q: "What has one eye, yet cannot see?", a: "A needle" },
+  { q: "What has a neck but no head?", a: "A bottle" },
+  { q: "What has hands but cannot clap?", a: "A clock" },
+  { q: "What has many teeth but cannot bite?", a: "A comb" },
+  { q: "What has thirteen hearts, but no other organs?", a: "A deck of cards" },
+  { q: "What runs but never walks, murmurs but never talks, has a bed but never sleeps?", a: "A river" },
+  { q: "What has words but never speaks?", a: "A book" },
+  { q: "What has branches, but no fruit, trunk, or leaves?", a: "A bank" },
+  { q: "Which building has the most stories?", a: "A library" },
+  { q: "Where does today come before yesterday?", a: "In the dictionary" },
+  { q: "What can you catch, but not throw?", a: "A cold" },
+  { q: "What kind of coat is best put on wet?", a: "A coat of paint" },
+  { q: "What goes up but never comes down?", a: "Your age" },
+  { q: "What gets wetter the more it dries?", a: "A towel" },
+  { q: "I'm light as a feather, yet the strongest person can't hold me for five minutes.", a: "Your breath" },
+  { q: "If you drop me, I'm sure to crack. Give me a smile and I'll always smile back.", a: "A mirror" },
+  { q: "What month of the year has twenty-eight days?", a: "All of them" },
+  { q: "What flies without wings and cries without eyes?", a: "A cloud" },
+  { q: "Two in a corner, one in a room, none in a house, but one in a shelter.", a: "The letter R" },
+  { q: "What goes through towns and over hills, but never moves?", a: "A road" },
+  { q: "I have keys but open no locks. I have space but no room. You can enter, but you can't go outside.", a: "A keyboard" },
+  { q: "What begins with an E, ends with an E, but contains only one letter?", a: "An envelope" },
+  { q: "What is black when it's clean and white when it's dirty?", a: "A chalkboard" },
+  { q: "What was the tallest mountain on Earth before Mount Everest was discovered?", a: "Mount Everest — it just hadn't been found yet" },
+  { q: "A man rode into town on Friday, stayed three nights, and rode out on Friday. How?", a: "His horse is named Friday" },
+  { q: "What occurs once in a minute, twice in a moment, and never in a thousand years?", a: "The letter M" },
+  { q: "I can climb and I can drop without ever moving. Check me when you're ill, or before stepping out.", a: "Temperature" },
+  { q: "What is always in front of you, but can't be seen?", a: "The future" },
+  { q: "What can you keep after giving it to someone?", a: "Your word" },
+  { q: "What goes up and down, but never moves?", a: "A staircase" },
+  { q: "Which room has no doors or windows?", a: "A mushroom" },
+  { q: "What kind of band never plays music?", a: "A rubber band" },
+  { q: "What has four wheels and flies?", a: "A garbage truck" },
+  { q: "What tastes better than it smells?", a: "A tongue" },
+  { q: "What has a bottom at the top?", a: "Your legs" },
+  { q: "What can jump higher than a building?", a: "Anything that can jump — buildings can't" },
+  { q: "What is full of holes but still holds water?", a: "A sponge" },
+  { q: "What question can you never answer “yes” to?", a: "“Are you asleep yet?”" },
+  { q: "What is easy to get into, but hard to get out of?", a: "Trouble" },
+  { q: "What kind of tree fits in your hand?", a: "A palm tree" },
+  { q: "I have a head and a tail, but no body.", a: "A coin" },
+  { q: "Remove my skin and I won't cry — but you will.", a: "An onion" },
+  { q: "If two's company and three's a crowd, what are four and five?", a: "Nine" },
+  { q: "What word contains twenty-six letters, but only three syllables?", a: "“Alphabet”" },
+  { q: "What comes once in a year, twice in a week, but never in a day?", a: "The letter E" },
+  { q: "Which is heavier — a ton of bricks or a ton of feathers?", a: "Neither; both weigh a ton" },
+  { q: "What begins with T, finishes with T, and has T in it?", a: "A teapot" },
+  { q: "I am an odd number. Take away a letter, and I become even.", a: "Seven" },
+  { q: "What three numbers give the same result whether you add them or multiply them?", a: "1, 2 and 3" },
+  { q: "What do you throw out when you want to use it, and take in when you're done with it?", a: "An anchor" },
+  { q: "What gets bigger the more you take away from it?", a: "A hole" },
+  { q: "What can go up a chimney down, but not down a chimney up?", a: "An umbrella" },
+  { q: "There is one of me in every corner and two of me in every room.", a: "The letter O" },
+  { q: "What loses its head every morning and gets it back every night?", a: "A pillow" },
+  { q: "What ship has two mates but no captain?", a: "A relationship" },
+  { q: "Ten men's strength, ten men's length, yet a young boy walks off with it.", a: "A rope" },
+  { q: "What walks on four legs in the morning, two at noon, and three in the evening?", a: "A human — crawling, walking, then with a cane" },
+  { q: "Until I am measured, I am not known. Yet how you miss me when I have flown.", a: "Time" },
+  { q: "I fly all day long, yet never go anywhere.", a: "A flag" },
+  { q: "What kind of cup doesn't hold water?", a: "A cupcake" },
+  { q: "What starts with a P, ends with an E, and has thousands of letters?", a: "The post office" },
+  { q: "What never asks questions, but is often answered?", a: "A doorbell" },
+  { q: "What has ears but cannot hear?", a: "A cornfield" },
+  { q: "What travels faster — heat or cold?", a: "Heat; you can always catch a cold" },
+  { q: "I have no life, but I can die.", a: "A battery" },
+  { q: "What goes into the water black and comes out red?", a: "A lobster" },
+  { q: "What is at the end of a rainbow?", a: "The letter W" },
+  { q: "What can't be put in a saucepan, no matter how big?", a: "Its lid" },
+  { q: "I am made of water, but if you put me in water, I die.", a: "An ice cube" },
+  { q: "What two things can you never eat for breakfast?", a: "Lunch and dinner" },
+  { q: "What word is pronounced the same, even after removing four of its five letters?", a: "“Queue”" },
+  { q: "I shave every day, but my beard stays exactly the same.", a: "A barber" },
+  { q: "What can you hold in your right hand, but never in your left?", a: "Your left hand" },
+  { q: "What five-letter word, typed in all capitals, reads the same upside down?", a: "SWIMS" },
+  { q: "Voiceless it cries, wingless flutters, toothless bites, mouthless mutters.", a: "The wind" },
+  { q: "Alive without breath, as cold as death; never thirsty, ever drinking.", a: "A fish" },
+  { q: "A box without hinges, key, or lid — yet golden treasure inside is hid.", a: "An egg" },
+  { q: "Thirty white horses on a red hill: first they champ, then they stamp, then they stand still.", a: "Teeth" },
+];
+
+/** Deterministic daily pick: same riddle for everyone, no repeat for 100 days. */
+export function riddleForDate(dateKey: string): Riddle {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dayNum = Math.floor(Date.UTC(y, (m ?? 1) - 1, d ?? 1) / 86_400_000);
+  const idx = ((dayNum % RIDDLES.length) + RIDDLES.length) % RIDDLES.length;
+  return RIDDLES[idx];
+}

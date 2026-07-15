@@ -21,6 +21,7 @@ import { NotFoundPage } from "./pages/NotFound";
 import { GamePage } from "./pages/GamePage";
 import { AccountPage } from "./pages/Account";
 import { LeaderboardPage } from "./pages/Leaderboard";
+import { CastPage } from "./pages/Cast";
 
 function Page({ children }: { children: React.ReactNode }) {
   return (
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="/leaderboards" element={<Page><LeaderboardPage /></Page>} />
             <Route path="/account" element={<Page><AccountPage /></Page>} />
             <Route path="/lore" element={<Page><LorePage /></Page>} />
+            <Route path="/cast" element={<Page><CastPage /></Page>} />
             <Route path="/settings" element={<Page><SettingsPage /></Page>} />
             <Route path="*" element={<Page><NotFoundPage /></Page>} />
           </Routes>

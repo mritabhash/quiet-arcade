@@ -4,11 +4,10 @@
  * decoration — fixed, non-interactive, and quiet under reduced motion.
  */
 
-/** A stubby verdigris dragon perched top-right, puffing little flames. */
-export function GamesDragon() {
+/** A stubby verdigris dragon puffing little flames — reused by the Cast page. */
+export function DragonArt() {
   return (
-    <div aria-hidden className="pointer-events-none fixed right-1 top-[84px] z-30 h-24 w-28 sm:right-3">
-      <svg viewBox="0 0 130 100" className="anim-float h-full w-full overflow-visible">
+    <svg viewBox="0 0 130 100" className="anim-float h-full w-full overflow-visible">
         {/* flame puff, drifting out of the snout */}
         <g className="anim-puff">
           <path d="M28 58 Q18 54 12 58 Q16 62 12 66 Q20 68 28 64 Z" className="fill-gold-400" />
@@ -48,16 +47,23 @@ export function GamesDragon() {
         {/* cheeks */}
         <circle cx="37" cy="50" r="2.2" className="fill-clay-300" opacity="0.6" />
         <circle cx="55" cy="50" r="2.2" className="fill-clay-300" opacity="0.6" />
-      </svg>
+    </svg>
+  );
+}
+
+/** A stubby verdigris dragon perched top-right, puffing little flames. */
+export function GamesDragon() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed right-1 top-[84px] z-30 h-24 w-28 sm:right-3">
+      <DragonArt />
     </div>
   );
 }
 
-/** The keeper of the ledger: a small princess with a scroll, mid-right. */
-export function StatsPrincess() {
+/** The keeper of the ledger: a small princess with a scroll — reused by the Cast page. */
+export function PrincessArt() {
   return (
-    <div aria-hidden className="pointer-events-none fixed left-1 top-[62%] z-30 h-32 w-24 sm:left-4">
-      <svg viewBox="0 0 90 130" className="anim-float-slow h-full w-full overflow-visible">
+    <svg viewBox="0 0 90 130" className="anim-float-slow h-full w-full overflow-visible">
         {/* sparkles about the crown */}
         <path d="M20 18 L21.5 22 L25 23 L21.5 24 L20 28 L18.5 24 L15 23 L18.5 22 Z" className="fill-gold-300 anim-twinkle" />
         <path d="M68 26 L69 29 L72 30 L69 31 L68 34 L67 31 L64 30 L67 29 Z" className="fill-teal-300 anim-twinkle" />
@@ -101,7 +107,15 @@ export function StatsPrincess() {
         {/* crown */}
         <path d="M36 26 L36 18 L40 22 L45 15 L50 22 L54 18 L54 26 Z" className="fill-gold-400" />
         <circle cx="45" cy="22" r="1.8" className="fill-teal-400" />
-      </svg>
+    </svg>
+  );
+}
+
+/** The keeper of the ledger: a small princess with a scroll, mid-right. */
+export function StatsPrincess() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed left-1 top-[62%] z-30 h-32 w-24 sm:left-4">
+      <PrincessArt />
     </div>
   );
 }

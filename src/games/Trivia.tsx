@@ -14,6 +14,7 @@ import {
 } from "../data/trivia";
 import { EASE } from "../components/motion";
 import { AndrewGlowbug } from "../components/AndrewGlowbug";
+import { fetchRound } from "../data/trivia/opentdb";
 
 /** points per question slot, before the mode multiplier */
 const LADDER = [100, 100, 100, 150, 150, 150, 200, 200, 200, 250, 250, 300, 300, 350, 400];
@@ -98,6 +99,9 @@ export function TriviaGame({ api }: { api: GameApi }) {
   const [setup, setSetup] = useState<TriviaSetup>(readSetup);
   const [phase, setPhase] = useState<"setup" | "play">("setup");
   const [questions, setQuestions] = useState<TriviaQuestion[]>([]);
+  /** live rounds come from OpenTDB; falls back to the local vault when offline */
+  const [loading, setLoading] = useState(false);
+  const [source, setSource] = useState<"live" | "vault" | "fallback" | null>(null);
 
   const [index, setIndex] = useState(0);
   const [points, setPoints] = useState(0);
@@ -126,9 +130,10 @@ export function TriviaGame({ api }: { api: GameApi }) {
       return { ...s, lifelines: next };
     });
 
-  const start = () => {
+  const start = async () => {
     localStorage.setItem(SETUP_KEY, JSON.stringify(setup));
-    setQuestions(drawRound(api.seed, setup.topic, setup.mode));
+    setQuestions([]);
+    setSource(null);
     setIndex(0);
     setPoints(0);
     setStreak(0);
@@ -141,6 +146,25 @@ export function TriviaGame({ api }: { api: GameApi }) {
     setUsed([]);
     setMisses(0);
     setPhase("play");
+    // Easy stays on the local vault (gentle, deterministic). Moderate and Hard
+    // fetch real, difficulty-graded questions from OpenTDB, with the vault as
+    // the offline safety net so a dropped connection never blocks a round.
+    if (setup.mode === "easy") {
+      setQuestions(drawRound(api.seed, setup.topic, setup.mode));
+      setSource("vault");
+      return;
+    }
+    setLoading(true);
+    try {
+      const round = await fetchRound(setup.topic, setup.mode);
+      setQuestions(round);
+      setSource("live");
+    } catch {
+      setQuestions(drawRound(api.seed, setup.topic, setup.mode));
+      setSource("fallback");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (phase === "setup") {
@@ -226,6 +250,20 @@ export function TriviaGame({ api }: { api: GameApi }) {
           >
             Open the vault
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || questions.length === 0) {
+    return (
+      <div className="flex flex-col gap-6">
+        <AndrewGlowbug playing={false} misses={0} />
+        <div className="qa-card grain flex flex-col items-center gap-3 rounded-2xl p-10 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" aria-hidden />
+          <p className="text-sm qa-muted" aria-live="polite">
+            Summoning fifteen fresh {setup.mode} questions from the Open Trivia DB…
+          </p>
         </div>
       </div>
     );
@@ -448,8 +486,12 @@ export function TriviaGame({ api }: { api: GameApi }) {
 
       <p className="text-xs qa-muted">
         {MODES.find((m) => m.id === setup.mode)?.name} mode ·{" "}
-        {setup.topic === "misc" ? "a blend of all nine topics" : setup.topic} · drawn from a vault of{" "}
-        {(TRIVIA_TARGET_PER_TOPIC * TRIVIA_TOPICS.length).toLocaleString()} questions.
+        {setup.topic === "misc" ? "a blend of all nine topics" : setup.topic} ·{" "}
+        {source === "live"
+          ? "live from the Open Trivia DB"
+          : source === "fallback"
+            ? "from the offline vault (OpenTDB unreachable)"
+            : `from the offline vault of ${(TRIVIA_TARGET_PER_TOPIC * TRIVIA_TOPICS.length).toLocaleString()}`}
       </p>
     </div>
   );

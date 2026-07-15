@@ -6,21 +6,25 @@ import { CITIES, distanceKm } from "../data/cities";
 import { MAP_DROP_PUZZLES } from "../data/mapDropPuzzles";
 import { pickFreshIndex } from "../lib/flagship";
 import { recordFlagshipRound } from "../lib/repo";
-import { WorldMap, toXY } from "../components/WorldMap";
+import { GlobeCanvas } from "../components/GlobeCanvas";
 import { Button, Chip } from "../components/ui";
 import { Counter, EASE } from "../components/motion";
 import { RabbitGuide, type RabbitMood } from "../components/RabbitGuide";
-import { easyHintsFor, easyFreeHintsFor } from "../lib/easyMode";
+import { easyFreeHintsFor } from "../lib/easyMode";
 import { read, write } from "../lib/storage";
+import { fetchPlaceImages, type PlaceImage } from "../lib/placeImages";
+import { ImageLightbox } from "../components/ImageLightbox";
+import { MapTapEasy } from "./MapTapEasy";
 
 /** Hard mode: hints come one at a time — ceiling by hints revealed, index is (revealed - 1). */
 const HINT_POINTS = [5000, 4300, 3600, 2900, 2200, 1500, 800] as const;
 const MAX_SCORE = 5000;
-/** Moderate mode: the three country hints are free; three closer looks cost a flat fee each. */
+/** Moderate mode: a photo round. One geotagged picture opens at the ceiling;
+ *  each extra photo (up to five) costs a flat fee. */
 const MODERATE_MAX_SCORE = 4000;
-const MODERATE_HINT_COST = 600;
-const MODERATE_TOTAL_HINTS = 6;
-const MODERATE_LABELS = ["Flag colours", "In the local tongue", "Country fact"] as const;
+const MODERATE_IMG_COST = 150;
+const MODERATE_MAX_IMAGES = 5;
+const MODERATE_MIN_IMAGES = 3;
 /** Easy mode: three famous facts are free; three closer looks cost a flat fee each. */
 const EASY_MAX_SCORE = 3000;
 const EASY_HINT_COST = 200;
@@ -89,19 +93,24 @@ export function MapDropGame({ api }: { api: GameApi }) {
     return MAP_DROP_PUZZLES[pickFreshIndex("map-drop", ids, rng)];
   }, [api.seed, api.mode]);
 
-  const countryHints = useMemo(() => easyHintsFor(place, api.seed), [place, api.seed]);
   const easyFree = useMemo(() => easyFreeHintsFor(place, api.seed), [place, api.seed]);
   const [difficulty, setDifficulty] = useState<Difficulty>(readDifficulty);
-  // easy/moderate need country data; unmapped country → hard's 7-hint flow for the round
+  // Moderate is a photo round fetched from Wikimedia Commons: images === null
+  // while loading, imagesFailed when the spot lacks enough usable pictures.
+  const [images, setImages] = useState<PlaceImage[] | null>(null);
+  const [imagesFailed, setImagesFailed] = useState(false);
+  const [zoomImg, setZoomImg] = useState<PlaceImage | null>(null);
+  // easy needs country data, moderate needs photos; either falling short → hard
   const eff: Difficulty =
-    (difficulty === "moderate" && countryHints === null) ||
+    (difficulty === "moderate" && imagesFailed) ||
     (difficulty === "easy" && easyFree === null)
       ? "hard"
       : difficulty;
+  const moderateReady = difficulty === "moderate" && !imagesFailed && images !== null;
+  const moderateLoading = difficulty === "moderate" && !imagesFailed && images === null;
 
-  // easy and moderate open with their three free hints; novice opens with the
-  // name alone; hard reveals one by one
-  const [revealed, setRevealed] = useState(eff === "easy" || eff === "moderate" ? 3 : 1);
+  // novice/moderate/hard all reveal one at a time; easy is delegated to MapTapEasy
+  const [revealed, setRevealed] = useState(1);
   const [pin, setPin] = useState<{ x: number; y: number } | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [rabbit, setRabbit] = useState<{ mood: RabbitMood; line: string }>(() => ({
@@ -125,14 +134,29 @@ export function MapDropGame({ api }: { api: GameApi }) {
     return () => clearTimeout(t);
   }, [poke, outcome]);
 
+  // Fetch moderate mode's geotagged photos when the place or mode changes.
   useEffect(() => {
-    if (difficulty === "moderate" && !countryHints && import.meta.env.DEV) {
-      console.warn(
-        `Map Drop moderate mode: no country data for ${place.name} (${place.country}); hard hints used.`,
-      );
-    }
-  }, [difficulty, countryHints, place]);
+    if (difficulty !== "moderate") return;
+    let cancelled = false;
+    const ctrl = new AbortController();
+    setImages(null);
+    setImagesFailed(false);
+    fetchPlaceImages(place, MODERATE_MAX_IMAGES, ctrl.signal)
+      .then((list) => {
+        if (cancelled) return;
+        if (list.length >= MODERATE_MIN_IMAGES) setImages(list);
+        else setImagesFailed(true);
+      })
+      .catch(() => {
+        if (!cancelled) setImagesFailed(true);
+      });
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+    };
+  }, [difficulty, place]);
 
+  const imageCount = images?.length ?? 0;
   const totalHints =
     eff === "hard"
       ? 7
@@ -140,7 +164,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
         ? NOVICE_TOTAL_HINTS
         : eff === "easy"
           ? EASY_TOTAL_HINTS
-          : MODERATE_TOTAL_HINTS;
+          : imageCount; // moderate reveals the geotagged photos one by one
   const hints =
     eff === "novice"
       ? [
@@ -151,16 +175,14 @@ export function MapDropGame({ api }: { api: GameApi }) {
         ]
       : eff === "easy"
         ? [...easyFree!.map((h) => h.text), ...place.hints.slice(0, 3)]
-        : eff === "moderate"
-          ? [...countryHints!, ...place.hints.slice(0, 3)]
-          : place.hints;
+        : place.hints;
   const ceiling =
     eff === "novice"
       ? NOVICE_MAX_SCORE - (revealed - 1) * NOVICE_HINT_COST
       : eff === "easy"
         ? EASY_MAX_SCORE - (revealed - 3) * EASY_HINT_COST
         : eff === "moderate"
-          ? MODERATE_MAX_SCORE - (revealed - 3) * MODERATE_HINT_COST
+          ? MODERATE_MAX_SCORE - (revealed - 1) * MODERATE_IMG_COST
           : HINT_POINTS[revealed - 1];
   const maxScore =
     eff === "easy" ? EASY_MAX_SCORE : eff === "moderate" ? MODERATE_MAX_SCORE : MAX_SCORE;
@@ -170,9 +192,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
     if (d === difficulty || outcome) return;
     setDifficulty(d);
     write(DIFFICULTY_KEY, d);
-    const nextEff =
-      (d === "easy" && !easyFree) || (d === "moderate" && !countryHints) ? "hard" : d;
-    setRevealed(nextEff === "easy" || nextEff === "moderate" ? 3 : 1);
+    setRevealed(1); // every non-easy mode opens with a single clue revealed
     bump();
   };
 
@@ -247,6 +267,18 @@ export function MapDropGame({ api }: { api: GameApi }) {
     });
   };
 
+  // Easy mode is the MapTap-style 3D globe game: five rounds, tap to place.
+  if (difficulty === "easy") {
+    return (
+      <MapTapEasy
+        api={api}
+        difficulties={DIFFICULTIES}
+        difficulty={difficulty}
+        onPick={(d) => switchDifficulty(d as Difficulty)}
+      />
+    );
+  }
+
   /* ------------------------------------------------ post-guess */
   if (outcome) {
     return (
@@ -266,11 +298,19 @@ export function MapDropGame({ api }: { api: GameApi }) {
           </p>
         </div>
 
-        <WorldMap
-          pin={outcome.pin}
-          actual={toXY(place.lon, place.lat)}
-          ariaLabel={`Result map. Your pin landed ${outcome.dist.toLocaleString()} kilometres from ${place.name}.`}
-        />
+        <div
+          className="relative overflow-hidden rounded-3xl border border-[var(--line)] bg-[#0b2731]"
+          role="img"
+          aria-label={`Result globe. Your pin landed ${outcome.dist.toLocaleString()} kilometres from ${place.name}.`}
+        >
+          <GlobeCanvas
+            className="h-[380px] w-full sm:h-[440px]"
+            interactive={false}
+            guess={{ lat: 90 - outcome.pin.y, lon: outcome.pin.x - 180 }}
+            answer={{ lat: place.lat, lon: place.lon }}
+            showArc
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Your pin" value={outcome.pinLabel} />
@@ -312,6 +352,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
   /* ----------------------------------------------------- play */
   return (
     <div className="flex flex-col gap-5">
+      {zoomImg && <ImageLightbox img={zoomImg} onClose={() => setZoomImg(null)} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest qa-muted">
@@ -349,7 +390,9 @@ export function MapDropGame({ api }: { api: GameApi }) {
               <span className="text-sm font-normal qa-muted"> pts possible</span>
             </p>
             <p className="text-xs qa-muted">
-              {revealed} / {totalHints} hints
+              {moderateLoading
+                ? "Finding photos…"
+                : `${revealed} / ${totalHints} ${moderateReady ? "photos" : "hints"}`}
             </p>
           </div>
         </div>
@@ -357,62 +400,113 @@ export function MapDropGame({ api }: { api: GameApi }) {
 
       <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)]">
         <div className="flex flex-col gap-2.5">
-          <div className="flex flex-col gap-2.5" aria-live="polite">
-            {hints.slice(0, revealed).map((hint, i) => (
-              <motion.div
-                key={`${difficulty}-${i}`}
-                initial={{ opacity: 0, x: -18, filter: "blur(6px)" }}
-                animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                transition={{ duration: 0.5, ease: EASE, delay: i < (eff === "easy" || eff === "moderate" ? 3 : 1) ? i * 0.15 : 0 }}
-                className="qa-card rounded-2xl px-4 py-3"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-widest qa-muted">
-                  {eff === "novice"
-                    ? i === 0
-                      ? "The name"
-                      : place.kind === "country"
-                        ? "Continent"
-                        : "Country"
-                    : eff === "easy"
-                      ? i < 3
-                        ? easyFree![i].label
-                        : `Closer look ${i - 2}`
-                      : eff === "moderate"
-                        ? (MODERATE_LABELS[i] ?? `Closer look ${i - 2}`)
-                        : `Hint ${i + 1}`}
-                </p>
-                <p className="mt-0.5 text-sm font-medium leading-snug">{hint}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          {revealed < totalHints ? (
-            <button
-              onClick={revealHint}
-              onMouseEnter={onTemptEnter}
-              onMouseLeave={onTemptLeave}
-              onFocus={onTemptEnter}
-              onBlur={onTemptLeave}
-              className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-3 text-left transition-colors hover:bg-[var(--card-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-            >
-              <p className="text-sm font-semibold">Reveal hint {revealed + 1}</p>
+          {moderateLoading ? (
+            <div className="flex flex-col gap-2.5">
+              <div className="h-44 w-full animate-pulse rounded-2xl bg-[var(--card-2)]" />
               <p className="text-xs qa-muted">
-                {eff === "hard"
-                  ? `Lowers your ceiling to ${HINT_POINTS[revealed].toLocaleString()} pts`
-                  : eff === "novice"
-                    ? `Costs ${NOVICE_HINT_COST.toLocaleString()} points — ceiling drops to ${(NOVICE_MAX_SCORE - revealed * NOVICE_HINT_COST).toLocaleString()} pts`
-                    : eff === "easy"
-                      ? `Costs ${EASY_HINT_COST} points — ceiling drops to ${(EASY_MAX_SCORE - (revealed - 2) * EASY_HINT_COST).toLocaleString()} pts`
-                      : `Costs ${MODERATE_HINT_COST} points — ceiling drops to ${(MODERATE_MAX_SCORE - (revealed - 2) * MODERATE_HINT_COST).toLocaleString()} pts`}
+                Fetching real photos taken near this place…
               </p>
-            </button>
+            </div>
+          ) : moderateReady ? (
+            <div className="flex flex-col gap-2.5" aria-live="polite">
+              {images!.slice(0, revealed).map((img, i) => (
+                <motion.figure
+                  key={`${place.id}-${i}`}
+                  initial={{ opacity: 0, y: 10, filter: "blur(6px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.5, ease: EASE }}
+                  className="qa-card overflow-hidden rounded-2xl"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setZoomImg(img)}
+                    aria-label={`Inspect photo ${i + 1} — opens a zoomable view`}
+                    className="group relative block w-full cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                  >
+                    <img
+                      src={img.url}
+                      alt={`Photo clue ${i + 1} taken near the hidden place`}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="h-44 w-full bg-[var(--card-2)] object-cover"
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute bottom-2 right-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                    >
+                      ⌕ Zoom
+                    </span>
+                  </button>
+                  <figcaption className="flex items-center justify-between gap-2 px-3 py-2 text-[10px] qa-muted">
+                    <span className="font-bold uppercase tracking-widest">Photo {i + 1}</span>
+                    <span className="truncate" title={`${img.credit} — Wikimedia Commons`}>
+                      {img.credit}
+                    </span>
+                  </figcaption>
+                </motion.figure>
+              ))}
+            </div>
           ) : (
-            <Chip className="self-start">
-              {totalHints === 2
-                ? "Both hints are out"
-                : `All ${totalHints === 7 ? "seven" : totalHints === 6 ? "six" : "three"} hints are out`}
-            </Chip>
+            <div className="flex flex-col gap-2.5" aria-live="polite">
+              {hints.slice(0, revealed).map((hint, i) => (
+                <motion.div
+                  key={`${difficulty}-${i}`}
+                  initial={{ opacity: 0, x: -18, filter: "blur(6px)" }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.5, ease: EASE, delay: i < (eff === "easy" ? 3 : 1) ? i * 0.15 : 0 }}
+                  className="qa-card rounded-2xl px-4 py-3"
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-widest qa-muted">
+                    {eff === "novice"
+                      ? i === 0
+                        ? "The name"
+                        : place.kind === "country"
+                          ? "Continent"
+                          : "Country"
+                      : eff === "easy"
+                        ? i < 3
+                          ? easyFree![i].label
+                          : `Closer look ${i - 2}`
+                        : `Hint ${i + 1}`}
+                  </p>
+                  <p className="mt-0.5 text-sm font-medium leading-snug">{hint}</p>
+                </motion.div>
+              ))}
+            </div>
           )}
+
+          {!moderateLoading &&
+            (revealed < totalHints ? (
+              <button
+                onClick={revealHint}
+                onMouseEnter={onTemptEnter}
+                onMouseLeave={onTemptLeave}
+                onFocus={onTemptEnter}
+                onBlur={onTemptLeave}
+                className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-3 text-left transition-colors hover:bg-[var(--card-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+              >
+                <p className="text-sm font-semibold">
+                  Reveal {moderateReady ? "photo" : "hint"} {revealed + 1}
+                </p>
+                <p className="text-xs qa-muted">
+                  {eff === "hard"
+                    ? `Lowers your ceiling to ${HINT_POINTS[revealed].toLocaleString()} pts`
+                    : eff === "novice"
+                      ? `Costs ${NOVICE_HINT_COST.toLocaleString()} points — ceiling drops to ${(NOVICE_MAX_SCORE - revealed * NOVICE_HINT_COST).toLocaleString()} pts`
+                      : eff === "easy"
+                        ? `Costs ${EASY_HINT_COST} points — ceiling drops to ${(EASY_MAX_SCORE - (revealed - 2) * EASY_HINT_COST).toLocaleString()} pts`
+                        : `Costs ${MODERATE_IMG_COST} points — ceiling drops to ${(MODERATE_MAX_SCORE - revealed * MODERATE_IMG_COST).toLocaleString()} pts`}
+                </p>
+              </button>
+            ) : (
+              <Chip className="self-start">
+                {moderateReady
+                  ? `All ${totalHints} photos are out`
+                  : totalHints === 2
+                    ? "Both hints are out"
+                    : `All ${totalHints === 7 ? "seven" : "three"} hints are out`}
+              </Chip>
+            ))}
 
           <div className="mt-auto pt-3">
             <RabbitGuide mood={rabbit.mood} line={rabbit.line} />
@@ -420,13 +514,24 @@ export function MapDropGame({ api }: { api: GameApi }) {
         </div>
 
         <div className="flex flex-col gap-3">
-          <WorldMap
-            pin={pin}
-            actual={null}
-            onPin={(x, y) => setPin({ x, y })}
-            onDropEnd={onPinPlaced}
-            ariaLabel="World map. Click or drag to place your pin. With the keyboard, use arrow keys to aim, plus and minus to zoom, and Enter to drop."
-          />
+          <div className="relative overflow-hidden rounded-3xl border border-[var(--line)] bg-[#0b2731]">
+            <GlobeCanvas
+              className="h-[380px] w-full sm:h-[440px]"
+              interactive={!outcome}
+              ariaLabel="Interactive globe. Drag or use arrow keys to aim the centre reticle, then tap or press Enter to drop your guess. Scroll, pinch, or the plus and minus keys zoom."
+              onTap={(lat, lon) => {
+                setPin({ x: lon + 180, y: 90 - lat });
+                onPinPlaced();
+              }}
+              guess={pin ? { lat: 90 - pin.y, lon: pin.x - 180 } : null}
+              answer={null}
+            />
+            {!pin && (
+              <p className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-4 py-3 text-center text-sm font-medium text-sand-50">
+                Drag or arrow-key to spin · scroll or pinch to zoom · tap or Enter to drop
+              </p>
+            )}
+          </div>
 
           <div className="flex items-center gap-3">
             <Button onClick={confirmDrop} disabled={!pin}>
@@ -434,8 +539,8 @@ export function MapDropGame({ api }: { api: GameApi }) {
             </Button>
             <p className="text-xs leading-snug qa-muted">
               {pin
-                ? "Drag the pin to adjust, then confirm. Closer keeps more points."
-                : "Click the map to drop your pin. Scroll or pinch to zoom in."}
+                ? "Tap again to move your guess, then confirm. Closer keeps more points."
+                : "Drag to spin the globe, then tap to drop your pin."}
             </p>
           </div>
         </div>
