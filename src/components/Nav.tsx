@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "./motion";
+import { versusAvailable } from "../lib/versus/versusRepo";
 
 const LINKS = [
   { to: "/", label: "Home" },
@@ -17,6 +18,9 @@ const LINKS = [
 export function Nav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const links = versusAvailable()
+    ? [...LINKS.slice(0, 4), { to: "/versus", label: "Versus" }, ...LINKS.slice(4)]
+    : LINKS;
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--bg)]/85 backdrop-blur-md">
@@ -33,7 +37,7 @@ export function Nav() {
         </Link>
 
         <div className="hidden items-center gap-1 sm:flex">
-          {LINKS.map((l) => (
+          {links.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
@@ -80,7 +84,7 @@ export function Nav() {
             transition={{ duration: 0.3, ease: EASE }}
           >
             <div className="flex flex-col gap-1 px-4 py-3">
-              {LINKS.map((l, i) => (
+              {links.map((l, i) => (
                 <motion.div
                   key={l.to}
                   initial={{ opacity: 0, x: -12 }}

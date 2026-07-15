@@ -94,7 +94,12 @@ export function MapDropGame({ api }: { api: GameApi }) {
   }, [api.seed, api.mode]);
 
   const easyFree = useMemo(() => easyFreeHintsFor(place, api.seed), [place, api.seed]);
-  const [difficulty, setDifficulty] = useState<Difficulty>(readDifficulty);
+  const versusDifficulty = api.versus
+    ? (api.versus.config as { difficulty?: Difficulty }).difficulty
+    : undefined;
+  const [difficulty, setDifficulty] = useState<Difficulty>(
+    () => versusDifficulty ?? readDifficulty(),
+  );
   // Moderate is a photo round fetched from Wikimedia Commons: images === null
   // while loading, imagesFailed when the spot lacks enough usable pictures.
   const [images, setImages] = useState<PlaceImage[] | null>(null);
@@ -189,6 +194,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
   const modeLabel = difficulty[0].toUpperCase() + difficulty.slice(1);
 
   const switchDifficulty = (d: Difficulty) => {
+    if (api.versus) return; // config is fixed for a match
     if (d === difficulty || outcome) return;
     setDifficulty(d);
     write(DIFFICULTY_KEY, d);
@@ -243,14 +249,16 @@ export function MapDropGame({ api }: { api: GameApi }) {
 
   const finishRound = () => {
     if (!outcome) return;
-    recordFlagshipRound("map-drop", api.mode, {
-      score: outcome.score,
-      max: maxScore,
-      won: outcome.dist <= 600,
-      perfect: outcome.score === maxScore,
-      hintsUsed: revealed,
-      puzzleId: place.id,
-    });
+    if (!api.versus) {
+      recordFlagshipRound("map-drop", api.mode, {
+        score: outcome.score,
+        max: maxScore,
+        won: outcome.dist <= 600,
+        perfect: outcome.score === maxScore,
+        hintsUsed: revealed,
+        puzzleId: place.id,
+      });
+    }
     api.finish({
       score: outcome.score,
       max: maxScore,
@@ -363,27 +371,29 @@ export function MapDropGame({ api }: { api: GameApi }) {
           </h2>
         </div>
         <div className="flex items-center gap-3">
-          <div
-            className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1"
-            role="tablist"
-            aria-label="Hint difficulty"
-          >
-            {DIFFICULTIES.map((d) => (
-              <button
-                key={d}
-                role="tab"
-                aria-selected={difficulty === d}
-                onClick={() => switchDifficulty(d)}
-                className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
-                  difficulty === d
-                    ? "bg-[var(--card-2)] text-[var(--ink)]"
-                    : "qa-muted hover:text-[var(--ink)]"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
+          {!api.versus && (
+            <div
+              className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1"
+              role="tablist"
+              aria-label="Hint difficulty"
+            >
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d}
+                  role="tab"
+                  aria-selected={difficulty === d}
+                  onClick={() => switchDifficulty(d)}
+                  className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
+                    difficulty === d
+                      ? "bg-[var(--card-2)] text-[var(--ink)]"
+                      : "qa-muted hover:text-[var(--ink)]"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="text-right">
             <p className="font-display text-2xl font-semibold">
               {ceiling.toLocaleString()}
