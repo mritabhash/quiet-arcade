@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "gen:timelens": "node scripts/genTimeLensGames.mjs",
+    "gen:higherlower": "node scripts/genHigherLowerGames.mjs",
+    "gen:shapes": "node scripts/genShapes.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "node --test tests/placeImages.test.ts tests/globeTextureQuality.test.ts",

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import type { GameApi } from "../types";
-import { mulberry32, shuffled, type Rng } from "../lib/random";
+import { mulberry32, type Rng } from "../lib/random";
 import { COMPARISON_CATEGORIES, type ComparisonCategory, type ComparisonItem } from "../data/comparisons";
+import { HIGHER_LOWER_GAMES } from "../data/higherLowerGames";
 import { EASE } from "../components/motion";
 import { useSettings } from "../context/SettingsContext";
 
@@ -13,22 +14,19 @@ interface Segment {
   chain: ComparisonItem[]; // 6 items -> 5 comparisons
 }
 
-/** Build two 6-item chains from two different categories (5 + 5 = 10 links). */
+/**
+ * Draw one of the ten thousand pre-generated games and resolve it into two
+ * 6-item chains from two different categories (5 + 5 = 10 links).
+ * Each game tuple is [catA, a0..a5, catB, b0..b5] — see data/higherLowerGames.
+ */
 function buildSegments(rng: Rng): Segment[] {
-  const cats = shuffled(rng, COMPARISON_CATEGORIES);
-  const segments: Segment[] = [];
-  for (const category of cats) {
-    if (segments.length === 2) break;
-    const items = shuffled(rng, category.items);
-    const chain: ComparisonItem[] = [];
-    for (const item of items) {
-      if (chain.length && chain[chain.length - 1].value === item.value) continue;
-      chain.push(item);
-      if (chain.length === 6) break;
-    }
-    if (chain.length === 6) segments.push({ category, chain });
-  }
-  return segments;
+  const game = HIGHER_LOWER_GAMES[Math.floor(rng() * HIGHER_LOWER_GAMES.length)];
+  const toSegment = (catIdx: number, itemIdx: readonly number[]): Segment => {
+    const category = COMPARISON_CATEGORIES[catIdx];
+    const chain: ComparisonItem[] = itemIdx.map((i) => category.items[i]);
+    return { category, chain };
+  };
+  return [toSegment(game[0], game.slice(1, 7)), toSegment(game[7], game.slice(8, 14))];
 }
 
 function formatValue(v: number, unit: string): string {

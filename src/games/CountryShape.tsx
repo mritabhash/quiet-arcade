@@ -5,25 +5,34 @@ import { mulberry32, shuffled } from "../lib/random";
 import { COUNTRY_SHAPES } from "../data/shapes";
 import { EASE } from "../components/motion";
 import { useSettings } from "../context/SettingsContext";
+import { Button } from "../components/ui";
 
-const ROUNDS = 8;
+const ROUNDS = 8; // length of a daily round
 
 export function CountryShapeGame({ api }: { api: GameApi }) {
   const { motionOK } = useSettings();
-  const rounds = useMemo(() => {
-    const rng = mulberry32(api.seed);
-    const order = shuffled(rng, COUNTRY_SHAPES).slice(0, ROUNDS);
-    return order.map((shape) => {
-      const others = shuffled(rng, COUNTRY_SHAPES.filter((s) => s.name !== shape.name)).slice(0, 3);
-      return { shape, options: shuffled(rng, [shape, ...others].map((s) => s.name)) };
-    });
-  }, [api.seed]);
+  const isPractice = api.mode === "practice";
+
+  // Daily: a fixed set of 8. Practice: the whole world, shuffled, played
+  // endlessly — the deck loops so there's always a next silhouette.
+  const deck = useMemo(() => {
+    const shuffledAll = shuffled(mulberry32(api.seed), COUNTRY_SHAPES);
+    return isPractice ? shuffledAll : shuffledAll.slice(0, ROUNDS);
+  }, [api.seed, isPractice]);
 
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
+  const [answered, setAnswered] = useState(0);
   const [choice, setChoice] = useState<string | null>(null);
 
-  const current = rounds[round];
+  // Resolve the current silhouette and its four options. Options use a
+  // per-round seed so practice can run past the deck length deterministically.
+  const current = useMemo(() => {
+    const shape = deck[round % deck.length];
+    const rng = mulberry32((api.seed + round * 0x9e3779b1) >>> 0);
+    const others = shuffled(rng, COUNTRY_SHAPES.filter((s) => s.name !== shape.name)).slice(0, 3);
+    return { shape, options: shuffled(rng, [shape, ...others].map((s) => s.name)) };
+  }, [deck, round, api.seed]);
 
   const pickOption = (name: string) => {
     if (choice) return;
@@ -31,8 +40,9 @@ export function CountryShapeGame({ api }: { api: GameApi }) {
     const correct = name === current.shape.name;
     const nextScore = score + (correct ? 1 : 0);
     setScore(nextScore);
+    setAnswered((a) => a + 1);
     setTimeout(() => {
-      if (round + 1 >= ROUNDS) {
+      if (!isPractice && round + 1 >= ROUNDS) {
         api.finish({
           score: nextScore,
           max: ROUNDS,
@@ -40,16 +50,29 @@ export function CountryShapeGame({ api }: { api: GameApi }) {
           label: nextScore === ROUNDS ? "Every silhouette, first look." : undefined,
         });
       } else {
+        // practice never ends on its own — keep the chain flowing
         setChoice(null);
         setRound(round + 1);
       }
     }, 1050);
   };
 
+  const endPractice = () => {
+    // `answered` already includes the round currently being shown/answered
+    api.finish({
+      score,
+      max: Math.max(answered, 1),
+      perfect: answered > 0 && score === answered,
+      label: `${score} correct of ${answered} silhouettes.`,
+    });
+  };
+
   return (
     <div className="flex flex-col items-center gap-6">
       <p className="text-xs font-bold uppercase tracking-widest qa-muted">
-        Shape {round + 1} of {ROUNDS} · {score} correct
+        {isPractice
+          ? `Shape ${round + 1} · ${score} correct`
+          : `Shape ${round + 1} of ${ROUNDS} · ${score} correct`}
       </p>
 
       <AnimatePresence mode="wait">
@@ -107,7 +130,17 @@ export function CountryShapeGame({ api }: { api: GameApi }) {
         })}
       </div>
 
-      <p className="text-xs qa-muted">Real map outlines, gently simplified. North is always up.</p>
+      {isPractice && answered > 0 && (
+        <Button variant="secondary" className="px-5 py-2 text-sm" onClick={endPractice}>
+          End practice &amp; see score
+        </Button>
+      )}
+
+      <p className="text-xs qa-muted">
+        {isPractice
+          ? "Free play — every country, endless rounds. North is always up."
+          : "Real map outlines, gently simplified. North is always up."}
+      </p>
     </div>
   );
 }
