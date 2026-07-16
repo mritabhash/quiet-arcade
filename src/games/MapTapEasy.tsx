@@ -3,7 +3,8 @@ import type { GameApi } from "../types";
 import { rngFor } from "../lib/random";
 import { MAP_DROP_PUZZLES } from "../data/mapDropPuzzles";
 import { distanceKm } from "../data/cities";
-import { GlobeCanvas, type LatLon } from "../components/GlobeCanvas";
+import { LazyGlobeCanvas as GlobeCanvas } from "../components/LazyGlobeCanvas";
+import type { LatLon } from "../components/GlobeCanvas";
 import { Button } from "../components/ui";
 
 /**

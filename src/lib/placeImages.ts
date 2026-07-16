@@ -3,7 +3,7 @@
  *
  * Two free, key-less sources, combined so the pictures actually *hint* at the
  * place rather than being random stock imagery:
- *   1) Wikipedia's own page media (the curated montage / landmark / skyline
+ *   1) Wikipedia's own page media (the curated landmark / skyline
  *      shots an editor chose to represent the place) — iconic, in page order.
  *   2) Wikimedia Commons *geosearch* — files geotagged within a few km of the
  *      place's coordinates, i.e. real pictures taken *at* the spot ("from the
@@ -45,33 +45,51 @@ const EN_WIKI = "https://en.wikipedia.org/w/api.php";
 const WIKI_REST = "https://en.wikipedia.org/api/rest_v1/page/media-list";
 const API_TITLE_LIMIT = 50;
 const GEO_RESULT_LIMIT = 500;
+const API_RETRY_DELAYS_MS = [750, 2_000] as const;
+const completedPhotoCache = new Map<string, PlaceImage[]>();
 
 /** JPEG/WebP are Commons' reliable photographic formats; PNG is mostly art. */
 const PHOTO = /\.(?:jpe?g|webp)$/i;
 const NON_PHOTO_WORDS = new Set([
+  "artwork",
   "blazon",
   "carte",
   "chart",
   "collage",
   "crest",
   "diagram",
+  "drawing",
   "emblem",
+  "engraving",
+  "etching",
   "flag",
   "harita",
   "icon",
+  "illustration",
   "kaart",
   "karta",
   "karte",
   "locator",
   "logo",
+  "litho",
+  "lithograph",
   "map",
   "maps",
   "mapa",
   "mappa",
   "mappe",
+  "manuscript",
+  "miniature",
   "montage",
+  "painting",
   "plan",
+  "poster",
+  "print",
+  "sketch",
   "seal",
+  "watercolor",
+  "watercolour",
+  "woodcut",
 ]);
 const TITLE_NOISE = new Set([
   "a",
@@ -110,10 +128,35 @@ function stripHtml(s: string): string {
     .trim();
 }
 
+async function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) throw signal.reason;
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  for (let attempt = 0; ; attempt += 1) {
+    const res = await fetch(url, { signal });
+    if (res.ok) return res.json();
+    const retryable = res.status === 429 || res.status === 502 || res.status === 503;
+    if (!retryable || attempt >= API_RETRY_DELAYS_MS.length) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const delay = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(10_000, retryAfter * 1_000)
+      : API_RETRY_DELAYS_MS[attempt];
+    await abortableDelay(delay, signal);
+  }
 }
 
 function tokenise(value: string): string[] {
@@ -147,7 +190,7 @@ function isUsablePhotoTitle(title: string): boolean {
   return !containsNonPhotoTerms(body);
 }
 
-function isPhotographicMetadata(info: {
+export function isPhotographicImageMetadata(info: {
   mime?: string;
   mediatype?: string;
   extmetadata?: { Categories?: { value?: string } };
@@ -159,7 +202,7 @@ function isPhotographicMetadata(info: {
 }
 
 function titleFingerprint(title: string, placeWords: Set<string>): Set<string> {
-  const body = title.replace(/^File:/i, "").replace(/\.(?:jpe?g|png)$/i, "");
+  const body = title.replace(/^File:/i, "").replace(/\.(?:jpe?g|webp)$/i, "");
   const allWords = tokenise(body);
   const specific = new Set(allWords.filter((word) => !placeWords.has(word)));
   // Numbered bulk uploads sometimes contain nothing except the place name and
@@ -182,18 +225,32 @@ function distanceBetweenKm(
   a: { lat?: number; lon?: number },
   b: { lat?: number; lon?: number },
 ): number {
-  if (a.lat === undefined || a.lon === undefined || b.lat === undefined || b.lon === undefined) {
+  if (
+    !Number.isFinite(a.lat) ||
+    !Number.isFinite(a.lon) ||
+    !Number.isFinite(b.lat) ||
+    !Number.isFinite(b.lon)
+  ) {
     return Infinity;
   }
   const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLon = (b.lon - a.lon) * rad;
-  const lat1 = a.lat * rad;
-  const lat2 = b.lat * rad;
+  const dLat = (b.lat! - a.lat!) * rad;
+  const dLon = (b.lon! - a.lon!) * rad;
+  const lat1 = a.lat! * rad;
+  const lat2 = b.lat! * rad;
   const h =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function hasVerifiedLocation(candidate: { lat?: number; lon?: number }): boolean {
+  return (
+    candidate.lat !== undefined &&
+    candidate.lon !== undefined &&
+    Number.isFinite(candidate.lat) &&
+    Number.isFinite(candidate.lon)
+  );
 }
 
 /**
@@ -205,8 +262,10 @@ export function selectDiverseImageCandidates<T extends PlaceImageCandidate>(
   place: Pick<PlaceLike, "name" | "country">,
   candidates: readonly T[],
   max: number,
+  options: { maxUnknownLocations?: number } = {},
 ): T[] {
   if (max <= 0) return [];
+  const maxUnknownLocations = Math.max(0, options.maxUnknownLocations ?? 1);
   const placeWords = new Set(tokenise(`${place.name} ${place.country}`));
   const fingerprints = new Map<T, Set<string>>();
   const unique: T[] = [];
@@ -222,6 +281,7 @@ export function selectDiverseImageCandidates<T extends PlaceImageCandidate>(
   }
 
   const selected: T[] = [];
+  let unknownLocations = 0;
   // Similarity is transitive: "Peanut Shoppe" -> "Planters Peanuts sign" ->
   // "Planters Columbus" is one subject even though the first/last titles do
   // not share a word. Build those components before ranking by geography.
@@ -254,6 +314,8 @@ export function selectDiverseImageCandidates<T extends PlaceImageCandidate>(
       if (selected.includes(candidate)) continue;
       const subject = subjectOf.get(candidate)!;
       if (usedSubjects.has(subject)) continue;
+      const hasLocation = hasVerifiedLocation(candidate);
+      if (!hasLocation && unknownLocations >= maxUnknownLocations) continue;
       if (
         spacingKm > 0 &&
         selected.some((other) => distanceBetweenKm(candidate, other) < spacingKm)
@@ -261,6 +323,7 @@ export function selectDiverseImageCandidates<T extends PlaceImageCandidate>(
         continue;
       }
       selected.push(candidate);
+      if (!hasLocation) unknownLocations += 1;
       usedSubjects.add(subject);
       if (selected.length >= max) return selected;
     }
@@ -359,13 +422,17 @@ async function geoImageCandidates(
 /**
  * Up to `max` real photos of the place — Wikipedia's iconic shots first, then
  * geotagged Commons pictures to fill. Returns fewer (or none) when coverage is
- * thin, so callers should fall back to another hint mode.
+ * thin, so callers can retry without padding the round with repeats.
  */
 export async function fetchPlaceImages(
   place: PlaceLike,
   max = 5,
   signal?: AbortSignal,
 ): Promise<PlaceImage[]> {
+  if (max <= 0) return [];
+  const cacheKey = `${place.name}|${place.country}|${place.lat}|${place.lon}|${max}`;
+  const cached = completedPhotoCache.get(cacheKey);
+  if (cached) return [...cached];
   // Always gather both sources. A page can have plenty of files but still show
   // one subject repeatedly, while a nearest-first geosearch can be dominated by
   // one uploader standing at one set of coordinates.
@@ -378,12 +445,16 @@ export async function fetchPlaceImages(
     place,
     wikiTitles.map((title) => ({ title })),
     perSource,
+    { maxUnknownLocations: perSource },
   );
   const geoPool = selectDiverseImageCandidates(place, geoCandidates, perSource);
   const candidates = selectDiverseImageCandidates<PlaceImageCandidate>(
     place,
     [...wikiCandidates, ...geoPool],
     API_TITLE_LIMIT,
+    // Coordinates are resolved in the imageinfo batch below. Keep article
+    // candidates until then; the final selection permits only one unknown.
+    { maxUnknownLocations: API_TITLE_LIMIT },
   );
   if (candidates.length === 0) return [];
 
@@ -435,7 +506,7 @@ export async function fetchPlaceImages(
   for (const candidate of candidates) {
     const page = byTitle.get(key(candidate.title));
     const ii = page?.imageinfo?.[0];
-    if (!ii?.thumburl || !isPhotographicMetadata(ii)) continue;
+    if (!ii?.thumburl || !isPhotographicImageMetadata(ii)) continue;
     const credit = stripHtml(ii.extmetadata?.Artist?.value ?? "");
     resolved.push({
       title: candidate.title,
@@ -450,5 +521,15 @@ export async function fetchPlaceImages(
       },
     });
   }
-  return selectDiverseImageCandidates(place, resolved, max).map(({ image }) => image);
+  // Article imagery remains first for landmark quality, but the final selector
+  // permits at most one file without a verified camera location.
+  const result = selectDiverseImageCandidates(place, resolved, max).map(({ image }) => image);
+  // Cache only a complete clue set. Thin/transient responses remain retryable.
+  if (result.length === max) {
+    if (completedPhotoCache.size >= 32) {
+      completedPhotoCache.delete(completedPhotoCache.keys().next().value!);
+    }
+    completedPhotoCache.set(cacheKey, result);
+  }
+  return [...result];
 }

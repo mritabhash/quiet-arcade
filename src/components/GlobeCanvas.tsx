@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { getGlobeMapGeometry } from "../data/globeMap50m";
 import {
   getGlobeMinimumCameraDistance,
+  getGlobeRecoveryTextureWidth,
   getGlobeTextureSpec,
   isGlobeTextureMemoryConstrained,
 } from "../lib/globeTextureQuality";
@@ -23,6 +24,16 @@ import {
  */
 
 export type LatLon = { lat: number; lon: number };
+
+export interface GlobeCanvasProps {
+  interactive: boolean;
+  onTap?: (lat: number, lon: number) => void;
+  guess?: LatLon | null;
+  answer?: LatLon | null;
+  showArc?: boolean;
+  className?: string;
+  ariaLabel?: string;
+}
 
 const R = 1;
 const OCEAN = "#12303a";
@@ -184,15 +195,7 @@ export function GlobeCanvas({
   showArc,
   className,
   ariaLabel,
-}: {
-  interactive: boolean;
-  onTap?: (lat: number, lon: number) => void;
-  guess?: LatLon | null;
-  answer?: LatLon | null;
-  showArc?: boolean;
-  className?: string;
-  ariaLabel?: string;
-}) {
+}: GlobeCanvasProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<THREE.Mesh | null>(null);
   const overlayRef = useRef<THREE.Group | null>(null);
@@ -293,19 +296,18 @@ export function GlobeCanvas({
       renderer.capabilities.maxTextureSize,
       memoryConstrained,
     );
+    const maxAnisotropy = Math.max(1, renderer.capabilities.getMaxAnisotropy());
     const allocatedTexture = landTextureWithFallback(
       preferredTextureSpec.width,
-      Math.max(1, renderer.capabilities.getMaxAnisotropy()),
+      maxAnisotropy,
     );
-    const texture = allocatedTexture.texture;
-    const textureSpec = {
-      width: allocatedTexture.width,
-      height: allocatedTexture.width / 2,
-    };
+    let texture = allocatedTexture.texture;
+    let textureWidth = allocatedTexture.width;
 
+    const globeMaterial = new THREE.MeshBasicMaterial({ map: texture });
     const globe = new THREE.Mesh(
       new THREE.SphereGeometry(R, 128, 96),
-      new THREE.MeshBasicMaterial({ map: texture }),
+      globeMaterial,
     );
     globe.rotation.y = -Math.PI / 2; // start looking at the Atlantic/Africa
     scene.add(globe);
@@ -338,7 +340,7 @@ export function GlobeCanvas({
         Math.max(
           ABSOLUTE_MIN_DIST,
           getGlobeMinimumCameraDistance({
-            textureWidth: textureSpec.width,
+            textureWidth,
             viewportHeight: h,
             pixelRatio: renderer.getPixelRatio(),
             verticalFovDegrees: camera.fov,
@@ -356,6 +358,7 @@ export function GlobeCanvas({
     const raycaster = new THREE.Raycaster();
     const pointers = new Map<number, { x: number; y: number }>();
     let contextLost = false;
+    let downgradeTextureOnRestore = false;
     let moved = 0;
     let didPinch = false;
     let pinchStartGap = 0;
@@ -365,8 +368,33 @@ export function GlobeCanvas({
     const onContextLost = (event: Event) => {
       event.preventDefault();
       contextLost = true;
+      downgradeTextureOnRestore =
+        getGlobeRecoveryTextureWidth(textureWidth) < textureWidth;
+      if (downgradeTextureOnRestore) {
+        // Drop the oversized CPU canvas before allocating its replacement so
+        // recovery does not briefly require both texture tiers in memory.
+        texture.dispose();
+        if (texture.image instanceof HTMLCanvasElement) {
+          texture.image.width = 1;
+          texture.image.height = 1;
+        }
+      }
     };
     const onContextRestored = () => {
+      if (downgradeTextureOnRestore) {
+        const previousTexture = texture;
+        const replacement = landTextureWithFallback(
+          getGlobeRecoveryTextureWidth(textureWidth),
+          maxAnisotropy,
+        );
+        texture = replacement.texture;
+        textureWidth = replacement.width;
+        globeMaterial.map = texture;
+        globeMaterial.needsUpdate = true;
+        previousTexture.dispose();
+        downgradeTextureOnRestore = false;
+        resize();
+      }
       contextLost = false;
       texture.needsUpdate = true;
     };
@@ -475,7 +503,7 @@ export function GlobeCanvas({
       texture.dispose();
       renderer.dispose();
       globe.geometry.dispose();
-      (globe.material as THREE.Material).dispose();
+      globeMaterial.dispose();
       if (el.parentNode) el.parentNode.removeChild(el);
     };
   }, []);
