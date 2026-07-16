@@ -1,5 +1,6 @@
 export const GLOBE_TEXTURE_MAX_WIDTH = 8192;
 export const GLOBE_TEXTURE_CONSTRAINED_WIDTH = 4096;
+export const GLOBE_TEXTURE_RECOVERY_MIN_WIDTH = 2048;
 
 export interface GlobeTextureSpec {
   width: number;
@@ -33,6 +34,14 @@ export function isGlobeTextureMemoryConstrained(
   deviceMemoryGb?: number,
 ): boolean {
   return coarsePointer || deviceMemoryGb === undefined || deviceMemoryGb <= 4;
+}
+
+/** Step down one power-of-two tier after a WebGL context-loss/OOM event. */
+export function getGlobeRecoveryTextureWidth(currentWidth: number): number {
+  const safeWidth = Math.max(2, Math.floor(currentWidth));
+  const currentPowerOfTwo = 2 ** Math.floor(Math.log2(safeWidth));
+  if (currentPowerOfTwo <= GLOBE_TEXTURE_RECOVERY_MIN_WIDTH) return currentPowerOfTwo;
+  return Math.max(GLOBE_TEXTURE_RECOVERY_MIN_WIDTH, currentPowerOfTwo / 2);
 }
 
 /**

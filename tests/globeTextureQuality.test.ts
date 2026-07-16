@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   getGlobeMinimumCameraDistance,
+  getGlobeRecoveryTextureWidth,
   getGlobeTextureSpec,
   isGlobeTextureMemoryConstrained,
 } from "../src/lib/globeTextureQuality.ts";
@@ -12,6 +13,12 @@ test("selects an 8K 2:1 atlas on desktop-class GPUs", () => {
     width: 8192,
     height: 4096,
   });
+});
+
+test("steps down the atlas after a GPU context-loss recovery", () => {
+  assert.equal(getGlobeRecoveryTextureWidth(8192), 4096);
+  assert.equal(getGlobeRecoveryTextureWidth(4096), 2048);
+  assert.equal(getGlobeRecoveryTextureWidth(2048), 2048);
 });
 
 test("preserves 2:1 fallbacks for constrained and older GPUs", () => {

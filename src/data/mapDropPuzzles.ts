@@ -259,6 +259,24 @@ export const MAP_DROP_PHOTO_PUZZLES: MapDropPuzzle[] = CURATED.filter(
   (puzzle) => puzzle.kind === "city",
 );
 
+/**
+ * Current selector coverage-checked cities for fixed Moderate versus matches.
+ * Keeping this explicit prevents a thin generated location from trapping both
+ * players; broader solo photo rounds can still use every curated city.
+ */
+const VERIFIED_PHOTO_CITY_IDS = new Set([
+  "asmara",
+  "cairo",
+  "cape-town",
+  "lisbon",
+  "mumbai",
+  "paramaribo",
+  "rio",
+]);
+
+export const MAP_DROP_VERIFIED_PHOTO_PUZZLES: MapDropPuzzle[] =
+  MAP_DROP_PHOTO_PUZZLES.filter((puzzle) => VERIFIED_PHOTO_CITY_IDS.has(puzzle.id));
+
 /** curated + generated gazetteer tier (1000+ hidden places) */
 export const MAP_DROP_PUZZLES: MapDropPuzzle[] = [
   ...CURATED,

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  isPhotographicImageMetadata,
   selectDiverseImageCandidates,
   type PlaceImageCandidate,
 } from "../src/lib/placeImages.ts";
@@ -55,11 +56,11 @@ test("normalises spelling and numbered bulk-upload variants", () => {
   const picked = selectDiverseImageCandidates(
     COLUMBUS,
     [
-      { title: "File:Ohio_Theatre,_Columbus,_OH.jpg" },
-      { title: "File:Ohio Theater, Columbus, OH - 48310718507.jpg" },
-      { title: "File:Columbus, Ohio Ɱ 114.jpg" },
-      { title: "File:Columbus, Ohio Ɱ 116.jpg" },
-      { title: "File:Columbus at night.jpg" },
+      { title: "File:Ohio_Theatre,_Columbus,_OH.jpg", lat: 39.96, lon: -83 },
+      { title: "File:Ohio Theater, Columbus, OH - 48310718507.jpg", lat: 39.962, lon: -83 },
+      { title: "File:Columbus, Ohio Ɱ 114.jpg", lat: 39.97, lon: -83 },
+      { title: "File:Columbus, Ohio Ɱ 116.jpg", lat: 39.98, lon: -83 },
+      { title: "File:Columbus at night.jpg", lat: 39.99, lon: -83 },
     ],
     5,
   );
@@ -88,8 +89,22 @@ test("rejects maps, montages, heraldry, and other non-photo assets", () => {
       { title: "File:Mappa_di_Asmara_TCI_1929.jpg" },
       { title: "File:Map_of_Asmara.jpg" },
       { title: "File:Asmara_map.jpg" },
-      { title: "File:Asmara_1935_Panorama_(2567806345).jpg" },
-      { title: "File:Solar_traffic_light_Asmara,_Eritrea.jpg" },
+      { title: "File:Old_city_engraving.jpg" },
+      {
+        title:
+          "File:Tropenmuseum_Royal_Tropical_Institute_Objectnumber_3728-375_Litho_voorstellende_een_marktgezicht.jpg",
+      },
+      { title: "File:Historic_city_painting.jpg" },
+      {
+        title: "File:Asmara_1935_Panorama_(2567806345).jpg",
+        lat: 15.338,
+        lon: 38.932,
+      },
+      {
+        title: "File:Solar_traffic_light_Asmara,_Eritrea.jpg",
+        lat: 15.342,
+        lon: 38.936,
+      },
     ],
     5,
   );
@@ -103,6 +118,43 @@ test("rejects maps, montages, heraldry, and other non-photo assets", () => {
   );
 });
 
+test("rejects historical illustrations hidden behind JPEG metadata", () => {
+  assert.equal(
+    isPhotographicImageMetadata({
+      mime: "image/jpeg",
+      mediatype: "BITMAP",
+      extmetadata: {
+        Categories: {
+          value:
+            "Slave markets|Slavery in art|Illustrations from Voyage à Surinam",
+        },
+      },
+    }),
+    false,
+  );
+  assert.equal(
+    isPhotographicImageMetadata({
+      mime: "image/jpeg",
+      mediatype: "BITMAP",
+      extmetadata: { Categories: { value: "Street photography|Paramaribo" } },
+    }),
+    true,
+  );
+  assert.equal(
+    isPhotographicImageMetadata({
+      mime: "image/jpeg",
+      mediatype: "BITMAP",
+      extmetadata: {
+        Categories: {
+          value:
+            "Chronicon Pictum|Miniatures in Chronicon Pictum|Artworks without Wikidata item",
+        },
+      },
+    }),
+    false,
+  );
+});
+
 test("does not turn one camera position into five unrelated clues", () => {
   const coordinate = { lat: 39.9599, lon: -83.0002 };
   const picked = selectDiverseImageCandidates(
@@ -113,6 +165,22 @@ test("does not turn one camera position into five unrelated clues", () => {
       { title: "File:Roof detail.jpg", ...coordinate },
       { title: "File:Window display.jpg", ...coordinate },
       { title: "File:Street sign.jpg", ...coordinate },
+    ],
+    5,
+  );
+
+  assert.equal(picked.length, 1);
+});
+
+test("allows at most one article image without a verified camera location", () => {
+  const picked = selectDiverseImageCandidates(
+    COLUMBUS,
+    [
+      { title: "File:Skyline at dawn.jpg" },
+      { title: "File:Central station exterior.jpg" },
+      { title: "File:Riverside festival.jpg" },
+      { title: "File:City hall clock.jpg" },
+      { title: "File:Market entrance.jpg" },
     ],
     5,
   );

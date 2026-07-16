@@ -3,10 +3,14 @@ import { motion } from "framer-motion";
 import type { GameApi } from "../types";
 import { rngFor, pickIndex } from "../lib/random";
 import { CITIES, distanceKm } from "../data/cities";
-import { MAP_DROP_PHOTO_PUZZLES, MAP_DROP_PUZZLES } from "../data/mapDropPuzzles";
+import {
+  MAP_DROP_PHOTO_PUZZLES,
+  MAP_DROP_PUZZLES,
+  MAP_DROP_VERIFIED_PHOTO_PUZZLES,
+} from "../data/mapDropPuzzles";
 import { pickFreshIndex } from "../lib/flagship";
 import { recordFlagshipRound } from "../lib/repo";
-import { GlobeCanvas } from "../components/GlobeCanvas";
+import { LazyGlobeCanvas as GlobeCanvas } from "../components/LazyGlobeCanvas";
 import { Button, Chip } from "../components/ui";
 import { Counter, EASE } from "../components/motion";
 import { RabbitGuide, type RabbitMood } from "../components/RabbitGuide";
@@ -95,8 +99,14 @@ export function MapDropGame({ api }: { api: GameApi }) {
   // Rounds that start in photo mode use the curated city pool so a versus match
   // cannot select a generated location with genuinely thin image coverage.
   const initialDifficulty = useRef(difficulty).current;
+  // Every player gets the same Daily place regardless of their saved setting.
+  // The shared Daily pool is photo-capable so Moderate can keep its contract.
   const puzzlePool =
-    initialDifficulty === "moderate" ? MAP_DROP_PHOTO_PUZZLES : MAP_DROP_PUZZLES;
+    api.versus && initialDifficulty === "moderate"
+      ? MAP_DROP_VERIFIED_PHOTO_PUZZLES
+      : api.mode === "daily" || initialDifficulty === "moderate"
+      ? MAP_DROP_PHOTO_PUZZLES
+      : MAP_DROP_PUZZLES;
   const place = useMemo(() => {
     const rng = rngFor([api.seed]);
     // daily stays purely date-deterministic; free play skips recent rounds
