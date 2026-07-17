@@ -173,14 +173,14 @@ export function HigherLowerGame({ api }: { api: GameApi }) {
                   onClick={() => guess("higher")}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-sage-600 py-2.5 font-bold text-sand-50 shadow-[0_3px_0_0_#36412d] transition-all hover:bg-sage-700 active:translate-y-[2px] active:shadow-none"
                 >
-                  <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M8 13 V3 M4 7 L8 3 L12 7" /></svg>
+                  <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M4 10 L8 5 L12 10" /></svg>
                   Higher
                 </button>
                 <button
                   onClick={() => guess("lower")}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-clay-500 py-2.5 font-bold text-sand-50 shadow-[0_3px_0_0_#7d3a27] transition-all hover:bg-clay-600 active:translate-y-[2px] active:shadow-none"
                 >
-                  <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M8 3 V13 M4 9 L8 13 L12 9" /></svg>
+                  <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M4 6 L8 11 L12 6" /></svg>
                   Lower
                 </button>
               </div>
