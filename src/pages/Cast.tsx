@@ -8,6 +8,10 @@ import { Worm } from "../components/AndrewGlowbug";
 import { Knight, OldMage } from "../components/KnightVigil";
 import { CatArt } from "../components/ArcadeCat";
 import { WizardArt } from "../components/ScrollWizard";
+import { SpotlightReveal } from "../components/SpotlightReveal";
+import { motion } from "framer-motion";
+import knightPortrait from "../assets/knight-vigil-portrait.png";
+import gamesDragonPortrait from "../assets/games-dragon-portrait.png";
 
 /**
  * The Cast page: a reference sheet for every character who keeps the arcade.
@@ -65,6 +69,50 @@ function GlowwormsPortrait() {
   );
 }
 
+/**
+ * A character's "other version" — a painterly portrait that sits hidden beneath
+ * the storybook art on their sheet and is seen only through the cursor
+ * spotlight, so the window reads as a glimpse of the real figure behind the
+ * drawing. Under motion a slow ken-burns drift keeps the glimpse alive and
+ * cinematic. `focus` tunes which band of the tall portrait the window frames.
+ */
+function PortraitReveal({
+  src,
+  motionOK,
+  focus = "top",
+}: {
+  src: string;
+  motionOK: boolean;
+  focus?: "top" | "center";
+}) {
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-[#0b0d16]">
+      <motion.img
+        src={src}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className={`absolute inset-0 h-full w-full select-none object-cover ${
+          focus === "center" ? "object-center" : "object-top"
+        }`}
+        initial={false}
+        animate={motionOK ? { scale: [1.04, 1.12], y: ["0%", "-3%"] } : { scale: 1.04 }}
+        transition={
+          motionOK
+            ? { duration: 20, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
+            : undefined
+        }
+      />
+      {/* a whisper of cool light so the portrait marries the card's palette */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "radial-gradient(60% 60% at 50% 32%, rgba(68,160,175,0.16) 0%, rgba(68,160,175,0) 70%)" }}
+        aria-hidden
+      />
+    </div>
+  );
+}
+
 type Character = {
   key: string;
   name: string;
@@ -74,6 +122,8 @@ type Character = {
   palette: string[]; // hex ("#..") or tailwind bg-* class
   darkPlate?: boolean;
   art: React.ReactNode;
+  /** A hidden "other version" revealed by the cursor spotlight on the plate. */
+  reveal?: React.ReactNode;
 };
 
 /** One colour chip: a hex value paints inline, anything else is a bg-* class. */
@@ -93,11 +143,22 @@ function Sheet({ c }: { c: Character }) {
   return (
     <article className="qa-card grain flex flex-col overflow-hidden rounded-3xl">
       <div
-        className={`flex h-48 items-center justify-center border-b border-[var(--line)] ${
+        className={`relative flex h-48 items-center justify-center overflow-hidden border-b border-[var(--line)] ${
           c.darkPlate ? "bg-pine-900" : "bg-sand-100 dark:bg-pine-900/60"
         }`}
       >
-        <div className="h-40 w-40">{c.art}</div>
+        {c.reveal ? (
+          <SpotlightReveal
+            base={
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-40 w-40">{c.art}</div>
+              </div>
+            }
+            reveal={c.reveal}
+          />
+        ) : (
+          <div className="h-40 w-40">{c.art}</div>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-5">
         <p className="qa-fleuron text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-gold-600 dark:text-gold-300">
@@ -129,6 +190,7 @@ export function CastPage() {
         "The home page's eternal vigil. She keeps her hour on her own slow schedule — walking the marches, sharpening her blade, standing watch beneath the moon.",
       palette: ["bg-teal-700", "bg-gold-500", "bg-clay-500", "#d8dde4", "#e7b194"],
       art: <Knight activity="guard" seated={false} motionOK={motionOK} />,
+      reveal: <PortraitReveal src={knightPortrait} motionOK={motionOK} />,
     },
     {
       key: "mage",
@@ -149,6 +211,7 @@ export function CastPage() {
         "A stubby verdigris dragon who guards the hall of games — puffing little flames, flapping stubby wings, and blinking at every passer-by.",
       palette: ["bg-sage-500", "bg-sage-700", "bg-gold-400", "bg-clay-300"],
       art: <DragonArt />,
+      reveal: <PortraitReveal src={gamesDragonPortrait} motionOK={motionOK} />,
     },
     {
       key: "princess",
