@@ -4,9 +4,9 @@ goals:
     title: "Dry run: add a small 'quietly improving itself' tagline to the site footer"
     rationale: "End-to-end test of the loop: worker -> PR -> preview -> promote."
     effort: S
-    status: approved
+    status: in_progress
     migration: false
-    branch: null
+    branch: agent/qa-001
     pr: null
     preview_url: null
     notes: null
