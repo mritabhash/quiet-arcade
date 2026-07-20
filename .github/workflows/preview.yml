@@ -1,0 +1,38 @@
+name: PR Preview
+
+on:
+  pull_request:
+
+jobs:
+  preview:
+    # Never run against forks: secrets must not reach untrusted code.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Validate goals ledger
+        run: node scripts/validateGoals.mjs
+      - name: Lint and test
+        run: npm run lint && npm test
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: https://ojiuxxopfnhrqhwhuwar.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_sW2MTLqoW19Hf-YAwOHQ5g__dtA94xP
+          VITE_POSTHOG_KEY: phc_yu48HSBHHidkhdrkW6K4yJcZn6XEFYciyZLgNB3syuhN
+          VITE_POSTHOG_HOST: https://us.i.posthog.com
+        run: npm run build
+      - name: Deploy preview channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_QUIET_ARCADE_B3B22 }}
+          projectId: quiet-arcade-b3b22
+          expires: 7d
