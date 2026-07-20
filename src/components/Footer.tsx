@@ -15,6 +15,7 @@ export function Footer() {
             A small hall of nightly puzzles, lit low. Everything you do here stays in this
             browser — nothing is sent anywhere, ever.
           </p>
+          <p className="mt-2 text-xs qa-muted opacity-70">Quietly improving itself.</p>
         </div>
         <nav className="flex gap-5 text-sm font-medium" aria-label="Footer">
           <Link className="hover:text-gold-600 dark:hover:text-gold-300" to="/games">Games</Link>
