@@ -419,3 +419,21 @@ for video per D.3), commit, update memory.
 - **Makeover remaining-work COMPLETE.** Final spend: 7 (map) + 12 (cast v1) + 12 (cast
   restyle) + 4 (knight/mage) + 36 (video) = **71 credits**. Balance ~626 (from 697),
   240 reserve untouched. First video attempt nsfw-flagged, not billed.
+
+### 2026-07-22 — animated Lore map loop
+
+- User: "make a loop of that map, so it feels very lively."
+- `seedance_2_0` 8s 1080p std, bitrate high, silent, start_image = uploaded
+  lore-map.webp (media f06f078f). aspect "auto" → output 1664x1248 (4:3): the map
+  is preserved intact and the frame is outpainted a little (more desk around the
+  parchment) — nothing cropped. Job `e32a6689-4c66-46c0-bf81-cc94b65ec0f8`. **72 cr.**
+  (First submit bounced the "IN THE DARK" preset; resent with declined_preset_id.)
+- Raw download was **29 MB** → re-encoded with ffmpeg-static (installed `npm i --no-save`,
+  binary at node_modules/ffmpeg-static/ffmpeg.exe): libx264 crf 26 preset slow -an
+  +faststart → **1.33 MB** `public/lore-map-loop.mp4` (kept native 1664x1248 for zoom).
+- `Lore.tsx`: viewer now renders a muted/loop/autoplay `<video>` (poster = lore-map.webp)
+  when motionOK, else the static `<img>`. Pan/zoom transform applies to both.
+- Verified on /lore: video in DOM, src lore-map-loop.mp4, readyState 4, currentTime
+  advancing (plays), 1664x1248. tsc clean.
+- Spend total now: 35 (images) + 36 (hero loop) + 2 (andrew) + 72 (map loop) = **145 cr**.
+  Balance ~552, reserve 240 safe.

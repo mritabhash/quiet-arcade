@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BlurReveal } from "../components/motion";
+import { useSettings } from "../context/SettingsContext";
 
 /**
  * The Lore page: a mythical map of the arcade's world, left unwritten.
@@ -16,6 +17,7 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 
 function MythicalMap() {
+  const { motionOK } = useSettings();
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
@@ -83,18 +85,40 @@ function MythicalMap() {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <img
-          src={`${import.meta.env.BASE_URL}lore-map.webp`}
-          alt="A hand-painted map of Arcanum, the arcade's world."
-          draggable={false}
-          loading="lazy"
-          className="block w-full select-none"
-          style={{
-            transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
-            transformOrigin: "center",
-            transition: drag.current ? "none" : "transform 0.18s ease-out",
-          }}
-        />
+        {motionOK ? (
+          // the map, gently alive: the static painting is the poster so the
+          // frame never flashes empty, and a silent loop plays over it.
+          <video
+            src={`${import.meta.env.BASE_URL}lore-map-loop.mp4`}
+            poster={`${import.meta.env.BASE_URL}lore-map.webp`}
+            aria-label="An animated hand-painted map of Arcanum, the arcade's world."
+            muted
+            loop
+            autoPlay
+            playsInline
+            preload="auto"
+            draggable={false}
+            className="block w-full select-none"
+            style={{
+              transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+              transformOrigin: "center",
+              transition: drag.current ? "none" : "transform 0.18s ease-out",
+            }}
+          />
+        ) : (
+          <img
+            src={`${import.meta.env.BASE_URL}lore-map.webp`}
+            alt="A hand-painted map of Arcanum, the arcade's world."
+            draggable={false}
+            loading="lazy"
+            className="block w-full select-none"
+            style={{
+              transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+              transformOrigin: "center",
+              transition: drag.current ? "none" : "transform 0.18s ease-out",
+            }}
+          />
+        )}
       </div>
 
       {/* zoom controls, tucked in the corner over the vignette */}
