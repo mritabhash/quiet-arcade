@@ -96,4 +96,48 @@ activates when the env vars below are present.
 - **Score caps** in `game_catalog` are deliberately generous; tighten them in
   the dashboard if cheating ever becomes a nuisance.
 
-- Run `migrations/0002_versus.sql`, then `supabase/tests/versus_isolation_tests.sql` to confirm Versus RLS (expects `ALL VERSUS TESTS PASSED`).
+## Versus (1v1 multiplayer) setup
+
+1. **Migrations** (in order, after `0001`):
+   - `migrations/0002_versus.sql` — matches, participants, create/join/get/submit RPCs.
+   - `migrations/0003_versus_trivia.sql` — private trivia question/progress stores,
+     service-role-only `vt_*` helpers, `finalize_versus_trivia`.
+   - `migrations/0004_versus_queue.sql` — matchmaking queue + `enqueue_match` /
+     `dequeue_match` / `find_my_match`.
+
+2. **Isolation tests** (SQL Editor; each rolls back):
+   - `tests/versus_isolation_tests.sql` → `ALL VERSUS TESTS PASSED`
+   - `tests/versus_trivia_isolation_tests.sql` → `ALL VERSUS TRIVIA TESTS PASSED`
+   - `tests/versus_queue_isolation_tests.sql` → `ALL VERSUS QUEUE TESTS PASSED`
+
+3. **Deploy the Edge Function** (Trivia moderate/hard authority):
+
+   ```
+   supabase functions deploy versus-trivia
+   ```
+
+   It uses the auto-injected `SUPABASE_URL` / `SUPABASE_ANON_KEY` /
+   `SUPABASE_SERVICE_ROLE_KEY` env vars — no extra secrets needed. It calls
+   OpenTDB (https://opentdb.com) outbound. Optional local check:
+   `deno test supabase/functions/versus-trivia/scoring.test.ts` (scoring parity
+   with `src/games/Trivia.tsx`).
+
+4. **Enable Realtime** (Project Settings → Realtime): broadcast + presence
+   must be allowed (they are by default). Versus uses only broadcast/presence
+   channels (`versus:<code>`, `matchmaking:<uid>`) — no table replication, so
+   nothing needs to be added to the publication.
+
+5. Anonymous sign-ins must be enabled (already required by `0001` setup) —
+   Versus works for anonymous players; signing up keeps their match history.
+
+### Versus security notes
+
+- Trivia moderate/hard answers live in `private.versus_trivia_questions`
+  (service-role only; the `private` schema is not exposed via PostgREST). The
+  Edge Function adjudicates each pick and computes the authoritative score in
+  `private.versus_trivia_progress`; the browser never sees a correct index
+  before locking in.
+- Map Drop and Trivia-easy versus scores are client-computed but capped by
+  `game_catalog.max_score_cap` and idempotent (first submit wins).
+- Matchmaking pairs only inside the same `(game_id, config_key)` bucket;
+  pairing uses `for update skip locked` so a waiter can't be grabbed twice.

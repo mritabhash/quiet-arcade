@@ -2,10 +2,22 @@ import { useParams } from "react-router-dom";
 import { useVersusMatch } from "../lib/versus/useVersusMatch";
 import { VersusShell } from "../components/VersusShell";
 import { MapDropGame } from "../games/MapDrop";
+import { TriviaGame } from "../games/Trivia";
 
 export function VersusRoomPage() {
   const { code = "" } = useParams();
-  const { view, loading, error, refresh } = useVersusMatch(code);
+  const {
+    view,
+    loading,
+    error,
+    refresh,
+    peers,
+    opponentProgress,
+    started,
+    sendStart,
+    sendProgress,
+    sendSubmitted,
+  } = useVersusMatch(code.toUpperCase());
 
   if (loading) return <p className="mx-auto max-w-2xl px-4 pt-16 qa-muted">Loading match…</p>;
   if (error || !view)
@@ -26,8 +38,15 @@ export function VersusRoomPage() {
       <VersusShell
         view={view}
         onSubmitted={refresh}
+        peers={peers}
+        opponentProgress={opponentProgress}
+        started={started}
+        onStart={sendStart}
+        sendProgress={sendProgress}
+        sendSubmitted={sendSubmitted}
         render={(api) => {
           if (view.game_id === "map-drop") return <MapDropGame api={api} />;
+          if (view.game_id === "trivia") return <TriviaGame api={api} />;
           return <p className="qa-muted">This game isn't wired for Versus yet.</p>;
         }}
       />

@@ -1,14 +1,22 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getMatch, joinMatch } from "./versusRepo";
-import type { VersusView } from "./types";
+import { openVersusChannel, type VersusChannel } from "./realtime";
+import type { VersusProgress, VersusView } from "./types";
 
-/** Loads a match by code and, if the viewer isn't already a participant and a
- *  slot is open, claims the guest seat. Poll `refresh` to see the opponent's
- *  submission in the async flow (realtime replaces polling in pillar 3). */
+/**
+ * Loads a match by code and, if the viewer isn't already a participant and a
+ * slot is open, claims the guest seat. Once loaded it joins the realtime room
+ * for presence + live progress; the opponent's submission auto-refreshes the
+ * view. `refresh` stays available as a manual fallback if realtime drops.
+ */
 export function useVersusMatch(code: string) {
   const [view, setView] = useState<VersusView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [peers, setPeers] = useState<string[]>([]);
+  const [opponentProgress, setOpponentProgress] = useState<VersusProgress | null>(null);
+  const [started, setStarted] = useState(false);
+  const channelRef = useRef<VersusChannel | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -47,5 +55,54 @@ export function useVersusMatch(code: string) {
     };
   }, [code]);
 
-  return { view, loading, error, refresh };
+  // Join the realtime room once we know who we are in this match.
+  const selfId = view
+    ? view.you_are === "guest"
+      ? view.guest_id
+      : view.you_are === "host"
+        ? view.host_id
+        : null
+    : null;
+
+  useEffect(() => {
+    if (!selfId) return;
+    const channel = openVersusChannel(code, selfId, {
+      onPresence: setPeers,
+      onStart: () => setStarted(true),
+      onProgress: setOpponentProgress,
+      onSubmitted: () => void refresh(),
+    });
+    channelRef.current = channel;
+    return () => {
+      channelRef.current = null;
+      channel.leave();
+    };
+  }, [code, selfId, refresh]);
+
+  const sendStart = useCallback(() => {
+    channelRef.current?.broadcastStart();
+    setStarted(true);
+  }, []);
+
+  const sendProgress = useCallback((p: VersusProgress) => {
+    channelRef.current?.broadcastProgress(p);
+  }, []);
+
+  const sendSubmitted = useCallback(() => {
+    channelRef.current?.broadcastSubmitted();
+  }, []);
+
+  return {
+    view,
+    loading,
+    error,
+    refresh,
+    peers,
+    opponentProgress,
+    started,
+    sendStart,
+    sendProgress,
+    sendSubmitted,
+    selfId,
+  };
 }

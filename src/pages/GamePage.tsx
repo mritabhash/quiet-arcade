@@ -3,6 +3,7 @@ import type { GameApi, GameId } from "../types";
 import { GAME_INDEX } from "../data/games";
 import { GameShell } from "../components/GameShell";
 import { GameLeaderboard } from "../components/GameLeaderboard";
+import { GameVersusPanel } from "../components/GameVersusPanel";
 import { ArcaneBackdrop } from "../components/ArcaneBackdrop";
 import { todayKey } from "../lib/date";
 import { WordGridGame } from "../games/WordGrid";
@@ -60,6 +61,7 @@ export function GamePage() {
         </Link>
       </div>
       <GameShell meta={meta}>{(api) => <Component api={api} />}</GameShell>
+      <GameVersusPanel gameId={meta.id} />
       <GameLeaderboard gameId={meta.id} />
     </div>
   );

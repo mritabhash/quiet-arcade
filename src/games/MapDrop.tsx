@@ -109,13 +109,15 @@ export function MapDropGame({ api }: { api: GameApi }) {
       : MAP_DROP_PUZZLES;
   const place = useMemo(() => {
     const rng = rngFor([api.seed]);
-    // daily stays purely date-deterministic; free play skips recent rounds
-    if (api.mode === "daily") {
+    // daily stays purely date-deterministic; versus must be too, or the two
+    // players' local recent-puzzle memories would pick them different places
+    if (api.mode === "daily" || api.versus) {
       return puzzlePool[pickIndex(rng, puzzlePool.length)];
     }
+    // free play skips recent rounds
     const ids = puzzlePool.map((p) => p.id);
     return puzzlePool[pickFreshIndex("map-drop", ids, rng)];
-  }, [api.seed, api.mode, puzzlePool]);
+  }, [api.seed, api.mode, api.versus, puzzlePool]);
 
   const easyFree = useMemo(() => easyFreeHintsFor(place, api.seed), [place, api.seed]);
   // Moderate is a photo round fetched from Wikimedia Commons: images === null
@@ -245,6 +247,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
   const onPinPlaced = () => {
     if (outcome) return;
     if (rabbit.mood !== "pointing") say("pointing", LINES.pinMoved);
+    api.versus?.onProgress({ role: api.versus.role, score: 0, lockedIn: false });
     bump();
   };
 
@@ -265,6 +268,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
     else if (dist <= 600) say("happy", LINES.happy);
     else if (dist <= 2500) say("squint", LINES.squint);
     else say("shocked", LINES.shocked);
+    api.versus?.onProgress({ role: api.versus.role, score, lockedIn: true });
   };
 
   const finishRound = () => {

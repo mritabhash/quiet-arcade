@@ -47,11 +47,13 @@ export interface GameResult {
 }
 
 export interface VersusHooks {
+  /** the durable match id (needed by the trivia authoritative path) */
+  matchId: string;
   /** the shared, both-players-identical match config */
   config: VersusConfig;
   /** which side the local player is */
   role: "host" | "guest";
-  /** live update to broadcast (no-op until the realtime pillar wires it up) */
+  /** live update to broadcast to the opponent */
   onProgress: (p: VersusProgress) => void;
 }
 
