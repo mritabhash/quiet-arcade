@@ -50,6 +50,12 @@ export function CinematicVigil() {
   const showLoop = motionOK && wide && !loopFailed;
   const still = `${BASE}knight/${activity}.webp`;
 
+  /* The bars are part of the layout, not paint over the picture: the stage is
+     a 16:9 window with a bar above and below it. On short viewports the
+     window has to give, and it gives from the ground rather than the sky —
+     she is composed near the top of these plates. */
+  const bar = motionOK ? "4svh" : "2svh";
+
   // the loop only runs while the band is on screen and the tab is watched
   useEffect(() => {
     if (!showLoop) return;
@@ -80,14 +86,18 @@ export function CinematicVigil() {
     <section
       ref={sectionRef}
       aria-label="The knight's vigil"
-      /* the stage is 16:9, the shape the plates were painted in, so nothing
-         of her is cropped away; the clamps keep it sane on odd viewports */
-      className="relative h-[56.25vw] max-h-[88svh] min-h-[62svh] overflow-hidden border-y border-[var(--line)] bg-pine-950"
+      style={{ height: `calc(56.25vw + ${bar} * 2)` }}
+      className="relative max-h-[92svh] min-h-[64svh] overflow-hidden border-y border-[var(--line)] bg-pine-950"
     >
       <p className="sr-only">{CAPTIONS[activity]}</p>
 
-      {/* the plate — one activity is mounted at a time */}
-      <motion.div className="absolute inset-0" style={motionOK ? { y: mediaY } : undefined} aria-hidden>
+      {/* the plate — one activity is mounted at a time. It lives *between*
+          the bars rather than under them, so a bar never sits on her head. */}
+      <motion.div
+        className="absolute inset-x-0"
+        style={{ top: bar, bottom: bar, ...(motionOK ? { y: mediaY } : {}) }}
+        aria-hidden
+      >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activity}
@@ -100,7 +110,7 @@ export function CinematicVigil() {
             {showLoop ? (
               <video
                 ref={videoRef}
-                className="h-full w-full object-cover object-center"
+                className="h-full w-full object-cover object-[center_18%]"
                 src={`${BASE}knight/loops/${activity}.mp4`}
                 poster={still}
                 muted
@@ -114,7 +124,7 @@ export function CinematicVigil() {
               <img
                 src={still}
                 alt=""
-                className={`h-full w-full object-cover object-center ${motionOK ? "qa-kenburns" : ""}`}
+                className={`h-full w-full object-cover object-[center_18%] ${motionOK ? "qa-kenburns" : ""}`}
                 loading="lazy"
                 decoding="async"
               />
@@ -140,20 +150,20 @@ export function CinematicVigil() {
       {motionOK ? (
         <>
           <motion.div
-            className="pointer-events-none absolute inset-x-0 top-0 h-[7svh] origin-top bg-pine-950"
-            style={{ scaleY: barScale }}
+            className="pointer-events-none absolute inset-x-0 top-0 origin-top bg-pine-950"
+            style={{ height: bar, scaleY: barScale }}
             aria-hidden
           />
           <motion.div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-[7svh] origin-bottom bg-pine-950"
-            style={{ scaleY: barScale }}
+            className="pointer-events-none absolute inset-x-0 bottom-0 origin-bottom bg-pine-950"
+            style={{ height: bar, scaleY: barScale }}
             aria-hidden
           />
         </>
       ) : (
         <>
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-[2svh] bg-pine-950" aria-hidden />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2svh] bg-pine-950" aria-hidden />
+          <div className="pointer-events-none absolute inset-x-0 top-0 bg-pine-950" style={{ height: bar }} aria-hidden />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-pine-950" style={{ height: bar }} aria-hidden />
         </>
       )}
 
