@@ -15,6 +15,19 @@ import { useSettings } from "../context/SettingsContext";
 
 export const EASE: [number, number, number, number] = [0.21, 0.47, 0.32, 0.98];
 
+/** A band of fog between sections; it drifts as you pass it. */
+export function MistDivider() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { motionOK } = useSettings();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const x = useTransform(scrollYProgress, [0, 1], [-40, 40]);
+  return (
+    <div ref={ref} className="relative h-24 overflow-hidden" aria-hidden>
+      <motion.div className="qa-mist" style={motionOK ? { x } : undefined} />
+    </div>
+  );
+}
+
 /** Componentry-style blur reveal: content unblurs and rises into place. */
 export function BlurReveal({
   children,
