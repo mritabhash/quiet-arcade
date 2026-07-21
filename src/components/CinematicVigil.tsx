@@ -35,9 +35,10 @@ export function CinematicVigil() {
   const mistY = useTransform(scrollYProgress, [0, 1], [36, -36]);
   const captionY = useTransform(scrollYProgress, [0, 1], [18, -18]);
 
-  // phones stay on the still: a loop is a lot to ask of a hotel wifi
+  // small phones stay on the still: a loop is a lot to ask of a hotel wifi.
+  // 600px lets narrower desktop/tablet windows still get the filmed loop.
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
+    const mq = window.matchMedia("(min-width: 600px)");
     const sync = () => setWide(mq.matches);
     sync();
     mq.addEventListener("change", sync);
@@ -117,7 +118,7 @@ export function CinematicVigil() {
                 loop
                 playsInline
                 autoPlay
-                preload="none"
+                preload="metadata"
                 onError={() => setLoopFailed(true)}
               />
             ) : (
