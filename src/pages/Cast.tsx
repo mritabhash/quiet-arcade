@@ -240,7 +240,7 @@ export function CastPage() {
         "Map Drop's pocket detective. Ears up, magnifying glass out — she celebrates a bullseye and topples clean over at a wild miss.",
       palette: ["#e9dcc3", "#f6efdd", "#d9a8a0", "#3a2c22"],
       art: <RabbitArt mood="investigating" />,
-      reveal: <PortraitReveal src={rabbitPortrait} motionOK={motionOK} />,
+      reveal: <PortraitReveal src={rabbitPortrait} motionOK={motionOK} focus="center" />,
     },
     {
       key: "momo",
@@ -276,7 +276,7 @@ export function CastPage() {
           <CatArt pose="sit" />
         </svg>
       ),
-      reveal: <PortraitReveal src={catPortrait} motionOK={motionOK} />,
+      reveal: <PortraitReveal src={catPortrait} motionOK={motionOK} focus="center" />,
     },
     {
       key: "wizard",
@@ -287,7 +287,7 @@ export function CastPage() {
         "A small old wizard perched below the nav, staff raised in a casting pose. His spell hangs in the air and sinks down the page in step with how far you scroll.",
       palette: ["bg-teal-700", "bg-pine-700", "bg-gold-400", "#e7b194"],
       art: <WizardArt />,
-      reveal: <PortraitReveal src={wizardPortrait} motionOK={motionOK} />,
+      reveal: <PortraitReveal src={wizardPortrait} motionOK={motionOK} focus="center" />,
     },
     {
       key: "glowworms",
