@@ -653,3 +653,50 @@ html.rm .qa-rays {
 html.rm .tile-pop {
   animation: none;
 }
+
+/* ---- living per-page wash (PageAurora) ------------------------------ *
+ * Two big soft colour glows, slowly drifting and breathing behind the
+ * page. Transform/opacity only (GPU, no layout repaint). Kept faint so
+ * it sets a mood without competing with content; reduced motion freezes
+ * it to a still tint. */
+.qa-aurora-blob {
+  position: absolute;
+  width: 68vmax;
+  height: 68vmax;
+  border-radius: 9999px;
+  filter: blur(64px);
+  opacity: 0.12;
+  will-change: transform, opacity;
+}
+.qa-aurora-a {
+  top: -22vmax;
+  left: -16vmax;
+  animation: qa-aurora-drift-a 44s ease-in-out infinite, qa-aurora-breathe 21s ease-in-out infinite;
+}
+.qa-aurora-b {
+  bottom: -24vmax;
+  right: -18vmax;
+  animation: qa-aurora-drift-b 56s ease-in-out infinite, qa-aurora-breathe 27s ease-in-out infinite 4s;
+}
+.qa-aurora-still {
+  animation: none !important;
+  opacity: 0.1;
+}
+@keyframes qa-aurora-drift-a {
+  0%, 100% { transform: translate3d(-3%, -2%, 0) scale(1); }
+  50%      { transform: translate3d(4%, 3%, 0) scale(1.12); }
+}
+@keyframes qa-aurora-drift-b {
+  0%, 100% { transform: translate3d(3%, 2%, 0) scale(1.08); }
+  50%      { transform: translate3d(-4%, -3%, 0) scale(1); }
+}
+@keyframes qa-aurora-breathe {
+  0%, 100% { opacity: 0.09; }
+  50%      { opacity: 0.16; }
+}
+@media (max-width: 640px) {
+  .qa-aurora-blob { width: 92vmax; height: 92vmax; filter: blur(48px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa-aurora-blob { animation: none !important; opacity: 0.1; }
+}

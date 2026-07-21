@@ -7,6 +7,7 @@ import { Footer } from "./components/Footer";
 import { ArcadeCat } from "./components/ArcadeCat";
 import { GlowWorms } from "./components/GlowWorms";
 import { AmbientRain } from "./components/AmbientRain";
+import { PageAurora } from "./components/PageAurora";
 import { ScrollWizard } from "./components/ScrollWizard";
 import { GamesDragon, StatsPrincess } from "./components/PageCharacters";
 import { EASE, ScrollProgress } from "./components/motion";
@@ -73,6 +74,7 @@ export default function App() {
         Skip to content
       </a>
       <ScrollProgress />
+      <PageAurora pathname={location.pathname} />
       <AmbientRain />
       <GlowWorms />
       <SigilDial />
