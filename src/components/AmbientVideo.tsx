@@ -14,12 +14,16 @@ const BASE = import.meta.env.BASE_URL;
 
 export function AmbientVideo() {
   const { motionOK, settings } = useSettings();
-  // the loop is a dark, obsidian-night piece; the parchment day theme keeps
-  // just the CSS wash. Reduced motion opts out of both.
-  const enabled = motionOK && settings.darkMode;
+  const enabled = motionOK;
+  // a matched pair: the obsidian-night nebula for dark, a warm parchment-day
+  // haze for light. Reduced motion keeps just the CSS wash.
+  const src = settings.darkMode ? "ambient-loop.mp4" : "ambient-loop-light.mp4";
   const ref = useRef<HTMLVideoElement>(null);
   const [mount, setMount] = useState(false);
   const [ready, setReady] = useState(false);
+
+  // re-fade when the theme (and therefore the clip) swaps
+  useEffect(() => setReady(false), [settings.darkMode]);
 
   // wait for idle before creating the <video> at all
   useEffect(() => {
@@ -55,11 +59,12 @@ export function AmbientVideo() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-20 overflow-hidden">
       <video
+        key={src}
         ref={ref}
         className={`h-full w-full object-cover transition-opacity duration-[1600ms] ${
           ready ? "opacity-100" : "opacity-0"
         }`}
-        src={`${BASE}ambient-loop.mp4`}
+        src={`${BASE}${src}`}
         muted
         loop
         autoPlay

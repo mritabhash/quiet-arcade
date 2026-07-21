@@ -458,3 +458,16 @@ for video per D.3), commit, update memory.
 - Verified dark /games: darkClass true, ambient mounted+playing readyState 4, subtle
   behind cards, text readable. tsc clean.
 - Spend total: 145 + 36 = **181 cr**. Balance ~516, reserve 240 safe.
+
+### 2026-07-22 — light-theme ambient loop
+
+- User: "make one background for the light mode."
+- `seedance_2_0` 8s 720p silent text-to-video, warm parchment palette (cream/gold
+  bokeh haze, sunlit motes, whisper of teal), job `1de6d20b-c23e-4af8-adf5-e7c5b0aa97ca`,
+  **36 cr**. avgLum 213 (bright) so dark text reads over it. Raw → ffmpeg crf30 →
+  **171 KB** `public/ambient-loop-light.mp4`.
+- AmbientVideo now enabled in BOTH themes and picks the clip by `settings.darkMode`
+  (dark→ambient-loop.mp4, light→ambient-loop-light.mp4), keyed by src so it re-fades
+  on theme toggle. Verified light /games: src ambient-loop-light.mp4, playing rs4,
+  warm haze subtle behind cream cards, text readable. tsc clean.
+- Spend total: 181 + 36 = **217 cr**. Balance ~480, reserve 240 safe.
