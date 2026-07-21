@@ -268,12 +268,45 @@ canon: the knight keeps a night vigil regardless of theme).
 
 | Asset | Model | Params | Credits | Status | File |
 |---|---|---|---|---|---|
-| starting balance | — | — | 1,121.5 avail | ✅ checked 2026-07-21 | — |
-| knight loop ×8 | seedance_2_0 | 8s 1080p silent | — | ⬜ not started | public/knight/loops/*.mp4 |
-| hero layers ×6 | gpt_image_2 | 2k medium 16:9 | — | ⬜ not started | public/hero/*.webp |
-| chamber cards ×16 | gpt_image_2 | 1k low 3:2 | — | ⬜ optional | public/chambers/*.webp |
-| cast portraits ×2 | gpt_image_2 | 1k medium 2:3 | — | ⬜ optional | public/cast/*.webp |
-| lore map upscale | upscale_image | 2k | — | ⬜ optional | public/lore-map.png |
+| starting balance | — | — | 1,121.5 avail | ✅ 2026-07-21 | — |
+| knight stills ×8 (REGENERATED) | gpt_image_2 | 2k high 16:9, `guard` first then as ref | ~24 | ✅ | public/knight/*.webp |
+| knight loop ×4 (tier 1) | seedance_2_0 | 8s 1080p std silent | 288 (72 ea) | ✅ | loops/{guard,bonfire,walk,fight}.mp4 |
+| knight loop ×4 (tier 2) | seedance_2_0_mini | 8s 720p silent | 80 (20 ea) | ✅ | loops/{gaze,sharpen,sleep,rest}.mp4 |
+| hero layers ×6 | gpt_image_2 + remove_background | 2k medium 16:9 | ~18 | ✅ | public/hero/{dark,light}-{sky,mid,fore}.webp |
+| chamber cards ×15 | gpt_image_2 | 1k low 16:9 | ~30 | ✅ | public/chambers/&lt;gameId&gt;.webp |
+| cast portraits ×2 | gpt_image_2 | 1k medium 2:3 | ~6 | ✅ | src/assets/*-cinematic-portrait.webp |
+| lore map upscale | upscale_image | — | — | ⬜ skipped (map already 1.8 MB; upscale would bloat it) |
+
+**Ending balance: ~700 credits** (reserve of 240 never touched).
+
+## 10. What changed against the plan (executor's notes, 2026-07-21)
+
+1. **The eight knight stills were regenerated, not reused.** The user asked
+   mid-run for new art in the Arcane style, so `guard` was generated first as the
+   design anchor and passed as the character reference for the other seven; the
+   2026-07-09 stills and their source jpegs were replaced. Two style directions
+   were tested for `guard` (cinematic AAA keyart vs. thick oil-brushstroke); the
+   first won on staging and palette and became canon.
+2. **Video tiering was decided by measured cost**, as planned: 72 credits per
+   1080p std loop vs 20 for mini/720p, so the four most-seen hours got the
+   premium tier. All eight were then re-encoded to 720p H.264 (crf 27) with a
+   portable `ffmpeg-static` binary — 8.6 MB → ~640 KB each, 6.2 MB for the set.
+3. **The hero renders only the active theme's plates** rather than shipping both
+   and hiding one with `dark:hidden`. Unsized absolutely-positioned `loading="lazy"`
+   images never fetched (zero measured height), and rendering one theme also
+   halves the payload. `settings.darkMode` drives it.
+4. **A scrim was added under the hero copy** (`from-pine-950/90` dark,
+   `from-sand-100/92` light) — the painted gate is too busy to read type over —
+   plus a bottom fade into `var(--bg)` so the art sinks into the page.
+5. **21st.dev's MCP is broken** (returns malformed tool results for every query),
+   so the card tilt and glare sweep were built on the project's existing
+   framer-motion. No new dependencies.
+6. **`vite.config.ts` `base` is now `/`, not `/quiet-arcade/`** (changed by the
+   versus work). Dev URL is `http://localhost:<port>/`. The dev-notes memory is
+   stale on this point.
+7. Cast portraits went to `src/assets/` and feed the page's existing
+   `PortraitReveal` spotlight rather than replacing the drawn sheets — the drawn
+   cast is what that page is about; the cinematic version is the reveal.
 
 ## 9. Execution order for Opus 4.8 (TL;DR)
 

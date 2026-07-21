@@ -10,7 +10,8 @@ import { CatArt } from "../components/ArcadeCat";
 import { WizardArt } from "../components/ScrollWizard";
 import { SpotlightReveal } from "../components/SpotlightReveal";
 import { motion } from "framer-motion";
-import knightPortrait from "../assets/knight-vigil-portrait.png";
+import knightPortrait from "../assets/knight-cinematic-portrait.webp";
+import magePortrait from "../assets/mage-cinematic-portrait.webp";
 import gamesDragonPortrait from "../assets/games-dragon-portrait.png";
 
 /**
@@ -201,6 +202,7 @@ export function CastPage() {
         "He appears only for the duel, staff raised and eyes sharp, and gives as good as he gets — bolt for parry, hour after quiet hour.",
       palette: ["bg-pine-700", "bg-gold-500", "bg-clay-400", "#f7f1e0"],
       art: <OldMage motionOK={motionOK} />,
+      reveal: <PortraitReveal src={magePortrait} motionOK={motionOK} />,
     },
     {
       key: "dragon",
