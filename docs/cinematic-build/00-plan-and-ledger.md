@@ -407,3 +407,15 @@ for video per D.3), commit, update memory.
   (no local ffmpeg; serve raw, or npm i ffmpeg-static to strip/shrink). Verify via
   canvas-probe (video won't show in hidden-tab screenshots). Then final commit + memory update.
 - Balance 662; after video ~626. Reserve 240 safe.
+
+### 2026-07-21 (cont. 4) — C video DONE ✅
+
+- Video `16b807cd-6801-4431-a9b9-127f0517b810` completed (seedance_2_0, 8s, 720p,
+  silent, 36 cr). Installed raw to `public/hero/gate-loop.mp4` (3.07 MB, valid ftyp
+  isom, no audio track so no ffmpeg strip needed; served raw — preload=none + desktop/
+  dark/motion gating keep it off the critical path).
+- Verified via canvas probe (video invisible in headless screenshots): 1280x720, 8.04s,
+  luminance contrast 0–254, avg RGB (39,51,65) = dark teal-blue night grade → DECODES-NONBLANK.
+- **Makeover remaining-work COMPLETE.** Final spend: 7 (map) + 12 (cast v1) + 12 (cast
+  restyle) + 4 (knight/mage) + 36 (video) = **71 credits**. Balance ~626 (from 697),
+  240 reserve untouched. First video attempt nsfw-flagged, not billed.
