@@ -3,7 +3,7 @@ import { motion, useTransform } from "framer-motion";
 import { GAMES } from "../data/games";
 import { GameCard } from "../components/GameCard";
 import { BlurReveal, Counter, EASE } from "../components/motion";
-import { KnightVigil } from "../components/KnightVigil";
+import { CinematicVigil } from "../components/CinematicVigil";
 import { DailyRiddle } from "../components/DailyRiddle";
 import { ArcaneScene, useHeroParallax } from "../components/ArcaneScene";
 import { loadStats, loadDailyCompletions, effectiveStreak } from "../lib/storage";
@@ -82,7 +82,7 @@ export function HomePage() {
       <DailyRiddle />
 
       {/* THE KNIGHT'S VIGIL — the hall's resident, living her own hours */}
-      <KnightVigil />
+      <CinematicVigil />
 
       {/* THE LEDGER */}
       <section aria-label="Your ledger" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">

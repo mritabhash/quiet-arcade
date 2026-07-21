@@ -565,6 +565,76 @@ html.rm .anim-twinkle {
   }
 }
 
+/* ------------------------------------------------ cinematic toolkit */
+
+/* a slow drift across a still plate, so a frozen frame still breathes */
+@keyframes qa-kenburns {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    transform: scale(1.07) translateY(-1.5%);
+  }
+}
+.qa-kenburns {
+  animation: qa-kenburns 34s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.qa-vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 30px rgb(18 16 25 / 0.55);
+}
+
+/* god rays, turned slowly enough that you only notice them on second look */
+@keyframes qa-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.qa-rays {
+  position: absolute;
+  inset: -40%;
+  pointer-events: none;
+  opacity: 0.12;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 14deg,
+    var(--ember) 17deg,
+    transparent 20deg 42deg,
+    var(--ember) 45deg,
+    transparent 48deg 360deg
+  );
+  filter: blur(22px);
+  animation: qa-rays 240s linear infinite;
+  mask-image: radial-gradient(closest-side, black 30%, transparent 72%);
+}
+
+.qa-mist {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background:
+    radial-gradient(42% 30% at 22% 82%, rgb(108 189 200 / 0.1), transparent 70%),
+    radial-gradient(50% 34% at 78% 88%, rgb(160 155 178 / 0.12), transparent 70%);
+  filter: blur(6px);
+}
+
+html.rm .qa-kenburns,
+html.rm .qa-rays {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa-kenburns,
+  .qa-rays {
+    animation: none;
+  }
+}
+
 /* tiny press feedback for tiles and keys */
 .tile-pop {
   animation: qa-pop 0.12s ease-out;
