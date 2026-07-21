@@ -206,11 +206,12 @@ function HeroGateLoop({ y }: { y?: MotionValue<number> }) {
   // wait for an idle moment before we even create the <video> element
   useEffect(() => {
     const w = window as typeof window & {
-      requestIdleCallback?: (cb: () => void) => number;
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
+    // timeout so the perpetually-animating hero still mounts the loop
     const id = w.requestIdleCallback
-      ? w.requestIdleCallback(() => setMount(true))
+      ? w.requestIdleCallback(() => setMount(true), { timeout: 2000 })
       : window.setTimeout(() => setMount(true), 1200);
     return () => {
       if (w.cancelIdleCallback) w.cancelIdleCallback(id);

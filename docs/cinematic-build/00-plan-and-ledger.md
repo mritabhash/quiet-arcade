@@ -437,3 +437,24 @@ for video per D.3), commit, update memory.
   advancing (plays), 1664x1248. tsc clean.
 - Spend total now: 35 (images) + 36 (hero loop) + 2 (andrew) + 72 (map loop) = **145 cr**.
   Balance ~552, reserve 240 safe.
+
+### 2026-07-22 — site-wide ambient video loop + per-page CSS aurora
+
+- User: "add a very minimal live background looping ... each page a different
+  background ... shouldn't overwhelm" then "use higgsfield mcp" (chose: one shared loop).
+- **PageAurora** (CSS, free): two soft colour glows drifting+breathing behind every
+  page, tinted per route (home teal/gold, games gold/terracotta, lore violet/teal,
+  cast sage/gold, ...). transform/opacity only; reduced-motion → still tint; mobile
+  softens blur. Commit 5741f36.
+- **AmbientVideo** (Higgsfield): one shared dark ambient loop site-wide, `seedance_2_0`
+  8s 720p silent text-to-video (no start image), job `3eaf40b8-45b8-43f5-9bf9-a968f858a608`,
+  **36 cr**. Drifting teal/violet nebula + faint gold motes on obsidian, no subject/text.
+  Raw 2.4 MB → ffmpeg crf30 → **188 KB** `public/ambient-loop.mp4`. Layer at -z-20 under
+  PageAurora, 45% scrim, DARK-theme only (light keeps just the aurora), idle-mount,
+  pause-on-hidden-tab, reduced-motion skips.
+- **Bugfix:** `requestIdleCallback` never fires on the perpetually-animating pages
+  (hero/Lenis/glowworms) → added `{timeout:2000}` in AmbientVideo AND ArcaneScene
+  HeroGateLoop (the hero gate loop had the same latent bug and now mounts reliably).
+- Verified dark /games: darkClass true, ambient mounted+playing readyState 4, subtle
+  behind cards, text readable. tsc clean.
+- Spend total: 145 + 36 = **181 cr**. Balance ~516, reserve 240 safe.
