@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { useSettings } from "../context/SettingsContext";
 
@@ -44,6 +44,17 @@ export function ArcaneScene({ scrollY }: { scrollY: MotionValue<number> }) {
 
   const live = <T,>(v: T) => (motionOK ? v : undefined);
 
+  // The ambient gate loop is a heavy indulgence: desktop + dark + motion only.
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px) and (pointer: fine)");
+    const on = () => setDesktop(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const heroLoopOK = motionOK && theme === "dark" && desktop;
+
   return (
     <div ref={rootRef} className="absolute inset-0 overflow-hidden" aria-hidden>
       {/* the flat wash underneath, so there is never a bare flash */}
@@ -59,6 +70,9 @@ export function ArcaneScene({ scrollY }: { scrollY: MotionValue<number> }) {
         midX={live(midX)}
         foreX={live(foreX)}
       />
+
+      {/* the assembled dark gate, brought to life — fades in over the plates */}
+      {heroLoopOK && <HeroGateLoop y={live(nearY)} />}
 
       {/* a scrim under the copy: the gate is busy, the words come first */}
       <div
@@ -174,6 +188,68 @@ function Plates({
         decoding="async"
       />
     </>
+  );
+}
+
+/**
+ * The dark hero, gently alive: an 8s silent loop of the assembled gate —
+ * flickering lantern, curling mist, a pulsing keystone rune — faded in over
+ * the painted plates. Mounted only when the browser is idle so it never
+ * costs the first paint, and paused whenever the hero scrolls out of view.
+ * The caller gates it to desktop + dark + motion; here we handle timing.
+ */
+function HeroGateLoop({ y }: { y?: MotionValue<number> }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [mount, setMount] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  // wait for an idle moment before we even create the <video> element
+  useEffect(() => {
+    const w = window as typeof window & {
+      requestIdleCallback?: (cb: () => void) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const id = w.requestIdleCallback
+      ? w.requestIdleCallback(() => setMount(true))
+      : window.setTimeout(() => setMount(true), 1200);
+    return () => {
+      if (w.cancelIdleCallback) w.cancelIdleCallback(id);
+      else clearTimeout(id);
+    };
+  }, []);
+
+  // play only while the hero is on screen
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) v.play().catch(() => {});
+        else v.pause();
+      },
+      { threshold: 0.05 },
+    );
+    io.observe(v);
+    return () => io.disconnect();
+  }, [mount]);
+
+  if (!mount) return null;
+  return (
+    <motion.video
+      ref={ref}
+      className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+        ready ? "opacity-100" : "opacity-0"
+      }`}
+      style={{ y }}
+      src={`${BASE}hero/gate-loop.mp4`}
+      muted
+      loop
+      playsInline
+      autoPlay
+      preload="none"
+      aria-hidden
+      onCanPlay={() => setReady(true)}
+    />
   );
 }
 

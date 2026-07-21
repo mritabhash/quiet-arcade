@@ -391,3 +391,19 @@ session: port from preview_start (was 49913). vite base '/'.
 **Spend after these land:** 31 + ~4 + 36 = ~71 cr (~626 left; 240 reserve safe).
 Remaining TODO: install knight/mage, install+integrate C video, verify (canvas-probe
 for video per D.3), commit, update memory.
+
+### 2026-07-21 (cont. 3) — C video retry + integration coded
+
+- Knight/mage repaint DONE + committed (7510230). Both painterly, canon-consistent.
+- First C video job `36dcc690-...` returned status **nsfw** (false positive — benign
+  night gate). NOT charged (balance 662 = 697-35). Retried silent + reworded:
+  **new video job `16b807cd-6801-4431-a9b9-127f0517b810`** (seedance_2_0 8s 16:9,
+  generate_audio:false, start_image 28527bca).
+- C INTEGRATION CODED + committed-pending in ArcaneScene.tsx: `HeroGateLoop` component
+  + `heroLoopOK` gate (motionOK && dark && desktop min-768/pointer-fine), idle-mount,
+  IO play/pause, preload none, fades in over plates. Points at `public/hero/gate-loop.mp4`.
+  tsc clean.
+- REMAINING: when `16b807cd` completes → download mp4 to `public/hero/gate-loop.mp4`
+  (no local ffmpeg; serve raw, or npm i ffmpeg-static to strip/shrink). Verify via
+  canvas-probe (video won't show in hidden-tab screenshots). Then final commit + memory update.
+- Balance 662; after video ~626. Reserve 240 safe.
