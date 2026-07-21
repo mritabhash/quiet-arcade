@@ -80,7 +80,9 @@ export function CinematicVigil() {
     <section
       ref={sectionRef}
       aria-label="The knight's vigil"
-      className="relative min-h-[72svh] overflow-hidden border-y border-[var(--line)] bg-pine-950"
+      /* the stage is 16:9, the shape the plates were painted in, so nothing
+         of her is cropped away; the clamps keep it sane on odd viewports */
+      className="relative h-[56.25vw] max-h-[88svh] min-h-[62svh] overflow-hidden border-y border-[var(--line)] bg-pine-950"
     >
       <p className="sr-only">{CAPTIONS[activity]}</p>
 
@@ -98,7 +100,7 @@ export function CinematicVigil() {
             {showLoop ? (
               <video
                 ref={videoRef}
-                className="h-full w-full object-cover object-[center_38%]"
+                className="h-full w-full object-cover object-center"
                 src={`${BASE}knight/loops/${activity}.mp4`}
                 poster={still}
                 muted
@@ -112,7 +114,7 @@ export function CinematicVigil() {
               <img
                 src={still}
                 alt=""
-                className={`h-full w-full object-cover object-[center_38%] ${motionOK ? "qa-kenburns" : ""}`}
+                className={`h-full w-full object-cover object-center ${motionOK ? "qa-kenburns" : ""}`}
                 loading="lazy"
                 decoding="async"
               />
