@@ -360,3 +360,34 @@ momo `79e5a763-b59b-496e-9374-4ded3362309b`. Installed to
   new painterly cast. Recommend regenerating those 2 to match (~4 cr) — awaiting user OK.
 - C (hero gate loop, 72 cr) not yet started — pending style approval + budget check.
 - Verify in browser (Cast reveals via spotlight, Lore pan/zoom), then commit on `cinematic`.
+
+### 2026-07-21 (cont. 2) — knight/mage repaint + C video IN FLIGHT
+
+User approved: (1) redo knight & mage painterly to match cast; (2) do C hero loop.
+
+**Knight/mage repaint** (`gpt_image_2` 1k/med 2:3, painterly preamble + reference):
+- knight job `6a8f1db3-57de-4536-ba31-8c35d69dad5f` — ref = guard `25f240b9-...`
+- mage  job `debc380a-ce49-477c-a91e-9381993af136` — ref = mage-ref `855ecd67-...`
+  (uploaded from the existing `src/assets/mage-cinematic-portrait.webp`)
+- INSTALL: download min webp, sharp resize 600x900 q82, OVERWRITE
+  `src/assets/knight-cinematic-portrait.webp` and `mage-cinematic-portrait.webp`.
+  Cast.tsx reveals ALREADY import those paths — no Cast edit needed. (~4 cr)
+
+**C hero gate loop** (`seedance_2_0` 8s 16:9, start_image = hero-dark `28527bca-...`):
+- job `36dcc690-51ba-4219-b46e-5ecfb4c941d1` — **36 cr** (not 72; cheaper than doc est).
+- start frame = `scratchpad/hero-dark.webp` = sharp composite of public/hero
+  dark-sky+dark-mid+dark-fore (2688x1520), uploaded as media 28527bca.
+- INSTALL: download mp4; re-encode (NO local ffmpeg — may need ffmpeg-static install,
+  or serve raw). Target `public/hero/gate-loop.(webm|mp4)`.
+- INTEGRATION (not yet done): a <video> layer faded in over the dark-fore hero plate,
+  DESKTOP + DARK theme only, preload="none", after requestIdleCallback, same
+  IntersectionObserver + reduced-motion gating as CinematicVigil.tsx. Find the hero
+  component that renders public/hero/dark-*.webp and add the layer there.
+
+**Resources:** cached sharp = `/c/Users/monda/AppData/Local/npm-cache/_npx/76dc10efc80ca823/node_modules/sharp`
+(require via argv, git path only resolves as argv not inline string). Dev server this
+session: port from preview_start (was 49913). vite base '/'.
+
+**Spend after these land:** 31 + ~4 + 36 = ~71 cr (~626 left; 240 reserve safe).
+Remaining TODO: install knight/mage, install+integrate C video, verify (canvas-probe
+for video per D.3), commit, update memory.
