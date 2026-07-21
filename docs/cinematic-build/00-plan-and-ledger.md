@@ -316,3 +316,47 @@ background). 3. While waiting: extract `knightState.ts`, scaffold `CinematicVigi
 assets). 4. Wire arrived assets; decide video tier 2 from real cost. 5. Phase 3 hero +
 scroll + 21st.dev. 6. Phase 4 verify + commit. Keep the reserve ≥ 240 credits, keep the
 vibe quiet, and keep `html.rm` sacred.
+
+---
+
+## Next-session execution — 2026-07-21 (cont.)
+
+Balance at start: **697** credits. MCP server this session: `a5747bfe…` (different
+from prior; old job ids don't resolve, so guard.webp was re-uploaded).
+
+**Guard character reference (re-established):** media_id `25f240b9-fb12-49b4-9632-d23064f7edcf`
+(PUT of `public/knight/guard.webp`, confirmed). Not needed for A/B (those are other
+characters) but on hand for any knight/mage regen.
+
+**A — Lore map:** `gpt_image_2` 2k/high 3:2, job `762083cf-b231-4e8a-b3c7-ebe194964907`
+(7 cr). Excellent, textless, all elements present. Installed: backed up old to
+`docs/cinematic-build/lore-map-original.png`; new `public/lore-map.webp` (328 KB,
+sharp resize 2000 q72); deleted `public/lore-map.png`. `Lore.tsx` rewritten with an
+inline pan/zoom viewer (wheel ≤4×, drag pan, +/−/reset, `data-lenis-prevent`,
+`.qa-vignette`) pointing at `lore-map.webp`.
+
+**B — Cast reveals (STYLE PIVOT):** user interrupted mid-run: "the artstyle should be
+of arcane's artstyle". v1 (mild preamble, `gpt_image_2` 1k/med 2:3, 6×2=12 cr) came
+out smooth/CGI-render — canon-accurate but not painterly. Regenerated all 6 with a
+strengthened painterly preamble (oil/gouache, impasto, anti-CGI, chiaroscuro) —
+6×2=12 cr. v2 adopted: clearly hand-painted oil, canon intact, no text issues
+(princess scroll = tally marks, not gibberish). NOTE: doc's Momo guess ("moth-keeper
+grandmother") was WRONG — source is a bespectacled chipmunk schoolteacher; prompted
+correctly. **Arcane not named in any prompt** (copyright + doc rule); style captured
+descriptively.
+
+v2 job ids: dragon `1ae335a5-b574-4642-a302-de6410cc3735`, princess
+`5782dd50-8a88-47b7-93f1-e16da6ad1be0`, rabbit `8c95204a-07bd-46c7-9e9b-e57c7909eb44`,
+cat `451a5a6d-f5f2-4567-b787-755c04ee9dc6`, wizard `2f05fed6-6425-4016-bcfe-d12cfda8f796`,
+momo `79e5a763-b59b-496e-9374-4ded3362309b`. Installed to
+`src/assets/<key>-cinematic-portrait.webp` (sharp resize 600×900 q82, 73–105 KB).
+`Cast.tsx` wired: dragon swapped off old png (deleted `games-dragon-portrait.png`),
++reveal on princess/rabbit/cat/wizard/momo. `tsc -b` clean; lint pre-existing warnings only.
+
+**Spend so far:** 7 + 12 + 12 = **31 credits** (~666 left; 240 reserve safe).
+
+**OPEN / next:**
+- Knight & mage shipped portraits are the OLD smooth-render look → will clash with the
+  new painterly cast. Recommend regenerating those 2 to match (~4 cr) — awaiting user OK.
+- C (hero gate loop, 72 cr) not yet started — pending style approval + budget check.
+- Verify in browser (Cast reveals via spotlight, Lore pan/zoom), then commit on `cinematic`.
