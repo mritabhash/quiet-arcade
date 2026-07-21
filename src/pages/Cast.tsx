@@ -18,6 +18,7 @@ import rabbitPortrait from "../assets/rabbit-cinematic-portrait.webp";
 import catPortrait from "../assets/cat-cinematic-portrait.webp";
 import wizardPortrait from "../assets/wizard-cinematic-portrait.webp";
 import momoPortrait from "../assets/momo-cinematic-portrait.webp";
+import andrewPortrait from "../assets/andrew-cinematic-portrait.webp";
 
 /**
  * The Cast page: a reference sheet for every character who keeps the arcade.
@@ -262,6 +263,7 @@ export function CastPage() {
         "Guardian of the vault: a luminous glowworm of impeccable breeding — tuxedo, spectacles, top hat and cane — who meets every wrong answer with a politely devastating remark.",
       palette: ["#9fd08a", "#2b2b33", "#b78325", "#f4efe2"],
       art: <Worm mood="calm" />,
+      reveal: <PortraitReveal src={andrewPortrait} motionOK={motionOK} />,
     },
     {
       key: "cat",
