@@ -1,108 +1,25 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useSettings } from "../context/SettingsContext";
-import { read, write } from "../lib/storage";
+import { CAPTIONS, useKnightActivity, type KnightActivity } from "../lib/knightState";
 
 /**
- * The knight's vigil — the ambient character band on the home page.
- * A mythical knight lives here on her own slow schedule: each activity
- * holds for at least an hour, persists across refreshes via localStorage,
- * and never repeats the last two picks. During "fight" an old mage
- * appears to duel her.
+ * The knight's vigil, drawn.
  *
- * She is drawn as a layered storybook figure: solid tapered limbs,
- * fitted plate with painted highlights and shadows, moonlit rim light —
- * shading is done with neutral white/black overlays so it survives both
- * themes. Under reduced motion everything renders as a still.
+ * She is a layered storybook figure: solid tapered limbs, fitted plate with
+ * painted highlights and shadows, moonlit rim light — shading is done with
+ * neutral white/black overlays so it survives both themes. Under reduced
+ * motion everything renders as a still.
+ *
+ * The home page now runs the filmed band (CinematicVigil) instead; this
+ * drawn form still supplies the Cast page its character sheets, and both
+ * keep the same hours (lib/knightState).
  */
 
-const KNIGHT_KEY = "quietArcade.knight";
-
-export type KnightActivity =
-  | "walk"
-  | "bonfire"
-  | "fight"
-  | "sleep"
-  | "sharpen"
-  | "guard"
-  | "gaze"
-  | "rest";
-
-const ACTIVITIES: KnightActivity[] = [
-  "walk",
-  "bonfire",
-  "fight",
-  "sleep",
-  "sharpen",
-  "guard",
-  "gaze",
-  "rest",
-];
-
-const CAPTIONS: Record<KnightActivity, string> = {
-  walk: "The knight walks the quiet marches, cloak trailing.",
-  bonfire: "The knight warms her hands over a low fire.",
-  fight: "The knight faces the old mage — again.",
-  sleep: "The knight sleeps sitting, sword close.",
-  sharpen: "The knight draws a whetstone along her blade.",
-  guard: "The knight stands her watch, hands on the pommel.",
-  gaze: "The knight shades her eyes and studies the horizon.",
-  rest: "The knight leans back and watches the sky.",
-};
-
-interface KnightState {
-  activity: KnightActivity;
-  startedAt: number;
-  nextChangeAt: number;
-  recent: KnightActivity[];
-}
-
-/** 60–100 minutes per activity */
-function nextDuration(): number {
-  return (60 + Math.random() * 40) * 60 * 1000;
-}
-
-function pickActivity(recent: KnightActivity[]): KnightActivity {
-  const avoid = new Set(recent.slice(0, 2));
-  const pool = ACTIVITIES.filter((a) => !avoid.has(a));
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function loadKnight(): KnightState {
-  const now = Date.now();
-  const s = read<KnightState | null>(KNIGHT_KEY, null);
-  if (s && ACTIVITIES.includes(s.activity) && typeof s.nextChangeAt === "number" && now < s.nextChangeAt) {
-    return s;
-  }
-  // nothing saved, or time's up — move her on, remembering where she's been
-  const recent = s && Array.isArray(s.recent) ? s.recent : [];
-  const activity = pickActivity([s?.activity, ...recent].filter(Boolean) as KnightActivity[]);
-  const fresh: KnightState = {
-    activity,
-    startedAt: now,
-    nextChangeAt: now + nextDuration(),
-    recent: [s?.activity, ...recent].filter(Boolean).slice(0, 2) as KnightActivity[],
-  };
-  write(KNIGHT_KEY, fresh);
-  return fresh;
-}
+export type { KnightActivity };
 
 export function KnightVigil() {
   const { motionOK } = useSettings();
-  const [state, setState] = useState<KnightState>(() => loadKnight());
-
-  // check once a minute whether her hour has passed
-  useEffect(() => {
-    const t = setInterval(() => {
-      setState((prev) => {
-        if (Date.now() < prev.nextChangeAt) return prev;
-        return loadKnight();
-      });
-    }, 60_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const a = state.activity;
+  const a = useKnightActivity();
   const seated = a === "bonfire" || a === "sleep" || a === "rest" || a === "sharpen";
 
   return (

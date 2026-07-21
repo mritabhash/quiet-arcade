@@ -565,6 +565,76 @@ html.rm .anim-twinkle {
   }
 }
 
+/* ------------------------------------------------ cinematic toolkit */
+
+/* a slow drift across a still plate, so a frozen frame still breathes */
+@keyframes qa-kenburns {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    transform: scale(1.07) translateY(-1.5%);
+  }
+}
+.qa-kenburns {
+  animation: qa-kenburns 34s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.qa-vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 30px rgb(18 16 25 / 0.55);
+}
+
+/* god rays, turned slowly enough that you only notice them on second look */
+@keyframes qa-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.qa-rays {
+  position: absolute;
+  inset: -40%;
+  pointer-events: none;
+  opacity: 0.12;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 14deg,
+    var(--ember) 17deg,
+    transparent 20deg 42deg,
+    var(--ember) 45deg,
+    transparent 48deg 360deg
+  );
+  filter: blur(22px);
+  animation: qa-rays 240s linear infinite;
+  mask-image: radial-gradient(closest-side, black 30%, transparent 72%);
+}
+
+.qa-mist {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background:
+    radial-gradient(42% 30% at 22% 82%, rgb(108 189 200 / 0.1), transparent 70%),
+    radial-gradient(50% 34% at 78% 88%, rgb(160 155 178 / 0.12), transparent 70%);
+  filter: blur(6px);
+}
+
+html.rm .qa-kenburns,
+html.rm .qa-rays {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa-kenburns,
+  .qa-rays {
+    animation: none;
+  }
+}
+
 /* tiny press feedback for tiles and keys */
 .tile-pop {
   animation: qa-pop 0.12s ease-out;
@@ -582,4 +652,51 @@ html.rm .anim-twinkle {
 }
 html.rm .tile-pop {
   animation: none;
+}
+
+/* ---- living per-page wash (PageAurora) ------------------------------ *
+ * Two big soft colour glows, slowly drifting and breathing behind the
+ * page. Transform/opacity only (GPU, no layout repaint). Kept faint so
+ * it sets a mood without competing with content; reduced motion freezes
+ * it to a still tint. */
+.qa-aurora-blob {
+  position: absolute;
+  width: 68vmax;
+  height: 68vmax;
+  border-radius: 9999px;
+  filter: blur(64px);
+  opacity: 0.12;
+  will-change: transform, opacity;
+}
+.qa-aurora-a {
+  top: -22vmax;
+  left: -16vmax;
+  animation: qa-aurora-drift-a 44s ease-in-out infinite, qa-aurora-breathe 21s ease-in-out infinite;
+}
+.qa-aurora-b {
+  bottom: -24vmax;
+  right: -18vmax;
+  animation: qa-aurora-drift-b 56s ease-in-out infinite, qa-aurora-breathe 27s ease-in-out infinite 4s;
+}
+.qa-aurora-still {
+  animation: none !important;
+  opacity: 0.1;
+}
+@keyframes qa-aurora-drift-a {
+  0%, 100% { transform: translate3d(-3%, -2%, 0) scale(1); }
+  50%      { transform: translate3d(4%, 3%, 0) scale(1.12); }
+}
+@keyframes qa-aurora-drift-b {
+  0%, 100% { transform: translate3d(3%, 2%, 0) scale(1.08); }
+  50%      { transform: translate3d(-4%, -3%, 0) scale(1); }
+}
+@keyframes qa-aurora-breathe {
+  0%, 100% { opacity: 0.09; }
+  50%      { opacity: 0.16; }
+}
+@media (max-width: 640px) {
+  .qa-aurora-blob { width: 92vmax; height: 92vmax; filter: blur(48px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa-aurora-blob { animation: none !important; opacity: 0.1; }
 }

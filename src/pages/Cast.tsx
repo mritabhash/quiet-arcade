@@ -10,8 +10,15 @@ import { CatArt } from "../components/ArcadeCat";
 import { WizardArt } from "../components/ScrollWizard";
 import { SpotlightReveal } from "../components/SpotlightReveal";
 import { motion } from "framer-motion";
-import knightPortrait from "../assets/knight-vigil-portrait.png";
-import gamesDragonPortrait from "../assets/games-dragon-portrait.png";
+import knightPortrait from "../assets/knight-cinematic-portrait.webp";
+import magePortrait from "../assets/mage-cinematic-portrait.webp";
+import dragonPortrait from "../assets/dragon-cinematic-portrait.webp";
+import princessPortrait from "../assets/princess-cinematic-portrait.webp";
+import rabbitPortrait from "../assets/rabbit-cinematic-portrait.webp";
+import catPortrait from "../assets/cat-cinematic-portrait.webp";
+import wizardPortrait from "../assets/wizard-cinematic-portrait.webp";
+import momoPortrait from "../assets/momo-cinematic-portrait.webp";
+import andrewPortrait from "../assets/andrew-cinematic-portrait.webp";
 
 /**
  * The Cast page: a reference sheet for every character who keeps the arcade.
@@ -201,6 +208,7 @@ export function CastPage() {
         "He appears only for the duel, staff raised and eyes sharp, and gives as good as he gets — bolt for parry, hour after quiet hour.",
       palette: ["bg-pine-700", "bg-gold-500", "bg-clay-400", "#f7f1e0"],
       art: <OldMage motionOK={motionOK} />,
+      reveal: <PortraitReveal src={magePortrait} motionOK={motionOK} />,
     },
     {
       key: "dragon",
@@ -211,7 +219,7 @@ export function CastPage() {
         "A stubby verdigris dragon who guards the hall of games — puffing little flames, flapping stubby wings, and blinking at every passer-by.",
       palette: ["bg-sage-500", "bg-sage-700", "bg-gold-400", "bg-clay-300"],
       art: <DragonArt />,
-      reveal: <PortraitReveal src={gamesDragonPortrait} motionOK={motionOK} />,
+      reveal: <PortraitReveal src={dragonPortrait} motionOK={motionOK} />,
     },
     {
       key: "princess",
@@ -222,6 +230,7 @@ export function CastPage() {
         "Keeper of the ledger. She waves from the margin of the stats page, crown a little askew and scroll in hand, and never drops a tally.",
       palette: ["bg-clay-400", "bg-gold-500", "bg-teal-400", "#e7b194"],
       art: <PrincessArt />,
+      reveal: <PortraitReveal src={princessPortrait} motionOK={motionOK} />,
     },
     {
       key: "rabbit",
@@ -232,6 +241,7 @@ export function CastPage() {
         "Map Drop's pocket detective. Ears up, magnifying glass out — she celebrates a bullseye and topples clean over at a wild miss.",
       palette: ["#e9dcc3", "#f6efdd", "#d9a8a0", "#3a2c22"],
       art: <RabbitArt mood="investigating" />,
+      reveal: <PortraitReveal src={rabbitPortrait} motionOK={motionOK} focus="center" />,
     },
     {
       key: "momo",
@@ -242,6 +252,7 @@ export function CastPage() {
         "Pattern Groups' guardian chipmunk: black glasses, a ruler she is not afraid to tap, and a heart of gold underneath. Poking her is inadvisable.",
       palette: ["#c98a52", "#6f4526", "#f2e2c8", "#dd9d92", "#1f1f1f"],
       art: <MomoArt mood="watch" />,
+      reveal: <PortraitReveal src={momoPortrait} motionOK={motionOK} />,
     },
     {
       key: "andrew",
@@ -252,6 +263,7 @@ export function CastPage() {
         "Guardian of the vault: a luminous glowworm of impeccable breeding — tuxedo, spectacles, top hat and cane — who meets every wrong answer with a politely devastating remark.",
       palette: ["#9fd08a", "#2b2b33", "#b78325", "#f4efe2"],
       art: <Worm mood="calm" />,
+      reveal: <PortraitReveal src={andrewPortrait} motionOK={motionOK} />,
     },
     {
       key: "cat",
@@ -266,6 +278,7 @@ export function CastPage() {
           <CatArt pose="sit" />
         </svg>
       ),
+      reveal: <PortraitReveal src={catPortrait} motionOK={motionOK} focus="center" />,
     },
     {
       key: "wizard",
@@ -276,6 +289,7 @@ export function CastPage() {
         "A small old wizard perched below the nav, staff raised in a casting pose. His spell hangs in the air and sinks down the page in step with how far you scroll.",
       palette: ["bg-teal-700", "bg-pine-700", "bg-gold-400", "#e7b194"],
       art: <WizardArt />,
+      reveal: <PortraitReveal src={wizardPortrait} motionOK={motionOK} focus="center" />,
     },
     {
       key: "glowworms",

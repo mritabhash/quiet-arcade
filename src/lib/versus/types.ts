@@ -6,7 +6,16 @@ export type VersusRole = "host" | "guest" | "none";
 export interface MapDropVersusConfig {
   difficulty: "novice" | "easy" | "moderate" | "hard";
 }
-export type VersusConfig = MapDropVersusConfig | Record<string, unknown>;
+
+/** Trivia match config. `lifelines` is per-match here (both players get the
+ *  same pack) so the server can validate lifeline use. */
+export interface TriviaVersusConfig {
+  topic: string;
+  mode: "easy" | "moderate" | "hard";
+  lifelines: string[];
+}
+
+export type VersusConfig = MapDropVersusConfig | TriviaVersusConfig | Record<string, unknown>;
 
 export interface VersusMatch {
   id: string;
@@ -42,4 +51,38 @@ export interface VersusProgress {
   score: number;
   step?: number;
   lockedIn?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Trivia authoritative path (versus-trivia Edge Function payloads)
+// ---------------------------------------------------------------------------
+
+/** A question as the server shows it — never contains the correct index. */
+export interface TriviaSanitizedQuestion {
+  index: number;
+  q: string;
+  choices: string[];
+  topic: string;
+  worth: number;
+  struck: number[];
+  hint?: string;
+  /** server-authoritative running state, for rehydration */
+  score: number;
+  streak: number;
+  correctCount: number;
+  used: string[];
+  secondChance: boolean;
+}
+
+/** The server's verdict on a pick. */
+export interface TriviaAdjudication {
+  correct: boolean;
+  /** present only once the question is finally resolved */
+  correctIndex?: number;
+  gain?: number;
+  score: number;
+  streak: number;
+  correctCount: number;
+  /** Plus One caught the miss — guess again */
+  secondChance?: boolean;
 }

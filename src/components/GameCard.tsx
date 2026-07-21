@@ -1,10 +1,13 @@
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import type { GameMeta } from "../types";
 import { GameIcon } from "./icons";
 import { Chip } from "./ui";
 import { EASE } from "./motion";
 import { useSettings } from "../context/SettingsContext";
+
+const BASE = import.meta.env.BASE_URL;
 
 const ACCENT_BG: Record<GameMeta["accent"], string> = {
   clay: "from-clay-200 to-sand-100 dark:from-clay-900 dark:to-pine-900",
@@ -20,6 +23,12 @@ const ACCENT_MESA: Record<GameMeta["accent"], string> = {
   gold: "fill-gold-400 dark:fill-gold-600",
 };
 
+/**
+ * A chamber door. The header is a painted door plate when the game has one,
+ * with the drawn spires kept underneath as both an accent and a fallback;
+ * on a fine pointer the whole card leans a few degrees toward the cursor and
+ * a band of lantern light crosses it. All of that is motion-gated.
+ */
 export function GameCard({
   meta,
   best,
@@ -30,13 +39,48 @@ export function GameCard({
   doneToday: boolean;
 }) {
   const { motionOK } = useSettings();
+  const ref = useRef<HTMLElement>(null);
+  const [artFailed, setArtFailed] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  const rx = useMotionValue(0);
+  const ry = useMotionValue(0);
+  const rotateX = useSpring(rx, { stiffness: 150, damping: 12 });
+  const rotateY = useSpring(ry, { stiffness: 150, damping: 12 });
+  const glareX = useTransform(rotateY, [-4, 4], ["-40%", "40%"]);
+
+  const tiltable =
+    motionOK && typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches;
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!tiltable) return;
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    ry.set(px * 8);
+    rx.set(-py * 8);
+  };
+
+  const rest = () => {
+    rx.set(0);
+    ry.set(0);
+    setHovered(false);
+  };
+
   return (
     <motion.article
+      ref={ref}
+      onPointerMove={onPointerMove}
+      onPointerEnter={() => tiltable && setHovered(true)}
+      onPointerLeave={rest}
       whileHover={motionOK ? { y: -6 } : undefined}
       transition={{ duration: 0.3, ease: EASE }}
+      style={tiltable ? { rotateX, rotateY, transformPerspective: 900 } : undefined}
       className="group relative flex h-full flex-col overflow-hidden rounded-sm qa-card shadow-sm transition-shadow hover:shadow-xl hover:shadow-gold-500/10"
     >
-      {/* chamber-door header: spires flanking a faint portal */}
+      {/* chamber-door header: the painted plate, or spires flanking a portal */}
       <div className={`relative h-36 overflow-hidden bg-gradient-to-b ${ACCENT_BG[meta.accent]}`}>
         <svg viewBox="0 0 400 144" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMax slice" aria-hidden>
           <path d="M-10 144 L30 74 L44 90 L58 48 L74 90 L88 74 L128 144 Z" className={ACCENT_MESA[meta.accent]} opacity="0.5" />
@@ -44,7 +88,18 @@ export function GameCard({
           <circle cx="200" cy="118" r="44" className={ACCENT_MESA[meta.accent]} opacity="0.25" />
           <ellipse cx="200" cy="150" rx="180" ry="18" className="fill-pine-900" opacity="0.14" />
         </svg>
-        <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 transition-transform duration-500 ease-out group-hover:-translate-y-[58%] group-hover:scale-105">
+        {!artFailed && (
+          <img
+            src={`${BASE}chambers/${meta.id}.webp`}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-90 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+            loading="lazy"
+            decoding="async"
+            onError={() => setArtFailed(true)}
+          />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--card)]/70 via-transparent to-transparent" />
+        <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_2px_8px_rgba(10,8,16,0.55)] transition-transform duration-500 ease-out group-hover:-translate-y-[58%] group-hover:scale-105">
           <GameIcon id={meta.id} />
         </div>
         {doneToday && (
@@ -56,6 +111,15 @@ export function GameCard({
           </span>
         )}
       </div>
+
+      {/* a band of lantern light crossing the door as you lean over it */}
+      {tiltable && hovered && (
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-r from-transparent via-gold-200/20 to-transparent"
+          style={{ x: glareX }}
+        />
+      )}
 
       <div className="flex flex-1 flex-col p-5">
         <h3 className="font-display text-2xl font-medium">{meta.title}</h3>

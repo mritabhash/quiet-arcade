@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import { motion, useTransform } from "framer-motion";
 import { GAMES } from "../data/games";
 import { GameCard } from "../components/GameCard";
-import { BlurReveal, Counter, EASE } from "../components/motion";
-import { KnightVigil } from "../components/KnightVigil";
+import { BlurReveal, Counter, EASE, MistDivider } from "../components/motion";
+import { CinematicVigil } from "../components/CinematicVigil";
 import { DailyRiddle } from "../components/DailyRiddle";
 import { ArcaneScene, useHeroParallax } from "../components/ArcaneScene";
 import { loadStats, loadDailyCompletions, effectiveStreak } from "../lib/storage";
@@ -81,8 +81,10 @@ export function HomePage() {
       {/* RIDDLE OF THE DAY — one from the hundred, sworn to the date */}
       <DailyRiddle />
 
+      <MistDivider />
+
       {/* THE KNIGHT'S VIGIL — the hall's resident, living her own hours */}
-      <KnightVigil />
+      <CinematicVigil />
 
       {/* THE LEDGER */}
       <section aria-label="Your ledger" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">

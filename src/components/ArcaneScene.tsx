@@ -1,82 +1,116 @@
-import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useMotionValue, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { useSettings } from "../context/SettingsContext";
 
 /**
- * Original layered magepunk skyline for the hero, built for parallax.
- * A brass orrery moon, floating rune-carved monoliths, gothic spires,
- * a riveted brass conduit, and the glowing gate of the arcade itself.
+ * The hero, built like a stage set: three painted plates at three depths —
+ * sky, the far rune-city ridge, the gate of the arcade itself — sliding at
+ * their own speeds as you scroll and leaning a little toward the pointer.
+ *
+ * The orrery and the stars stay hand-drawn SVG on top of the paintings:
+ * that mix of flat vector over painted depth is what sells the 2.5D. Both
+ * themes are painted (obsidian night / parchment afternoon) and swap the
+ * way the old sun and moon did.
  */
+
+const BASE = import.meta.env.BASE_URL;
+
 export function ArcaneScene({ scrollY }: { scrollY: MotionValue<number> }) {
-  const { motionOK } = useSettings();
+  const { motionOK, settings } = useSettings();
+  const theme = settings.darkMode ? "dark" : "light";
+  const rootRef = useRef<HTMLDivElement>(null);
+
   const farY = useTransform(scrollY, [0, 700], [0, 90]);
   const midY = useTransform(scrollY, [0, 700], [0, 50]);
   const nearY = useTransform(scrollY, [0, 700], [0, 14]);
 
+  // the set leans toward the pointer, a few pixels per plate
+  const px = useMotionValue(0);
+  const pointer = useSpring(px, { stiffness: 40, damping: 14 });
+  const skyX = useTransform(pointer, [-1, 1], [3, -3]);
+  const midX = useTransform(pointer, [-1, 1], [6, -6]);
+  const foreX = useTransform(pointer, [-1, 1], [10, -10]);
+
+  useEffect(() => {
+    if (!motionOK) return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    const onMove = (e: PointerEvent) => {
+      const w = window.innerWidth || 1;
+      px.set((e.clientX / w) * 2 - 1);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [motionOK, px]);
+
+  const live = <T,>(v: T) => (motionOK ? v : undefined);
+
+  // The ambient gate loop is a heavy indulgence: desktop + dark + motion only.
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px) and (pointer: fine)");
+    const on = () => setDesktop(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const heroLoopOK = motionOK && theme === "dark" && desktop;
+
   return (
-    <svg
-      viewBox="0 0 1440 810"
-      preserveAspectRatio="xMidYMax slice"
-      className="absolute inset-0 h-full w-full"
-      aria-hidden
-    >
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#c8bfd6" />
-          <stop offset="55%" stopColor="#e2d5c2" />
-          <stop offset="100%" stopColor="#efe5ca" />
-        </linearGradient>
-        <linearGradient id="skyDark" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0d0b13" />
-          <stop offset="60%" stopColor="#1b1824" />
-          <stop offset="100%" stopColor="#2b2440" />
-        </linearGradient>
-      </defs>
+    <div ref={rootRef} className="absolute inset-0 overflow-hidden" aria-hidden>
+      {/* the flat wash underneath, so there is never a bare flash */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#c8bfd6] via-[#e2d5c2] to-[#efe5ca] dark:from-[#0d0b13] dark:via-[#1b1824] dark:to-[#2b2440]" />
 
-      <rect width="1440" height="810" className="fill-[url(#sky)] dark:fill-[url(#skyDark)]" />
+      {/* only the hour we are actually in gets fetched */}
+      <Plates
+        theme={theme}
+        farY={live(farY)}
+        midY={live(midY)}
+        nearY={live(nearY)}
+        skyX={live(skyX)}
+        midX={live(midX)}
+        foreX={live(foreX)}
+      />
 
-      {/* scattered stars — faint by day, awake at night */}
-      <motion.g style={motionOK ? { y: farY } : undefined} className="opacity-20 dark:opacity-90">
-        {[
-          [120, 90, 1.6], [310, 150, 1.1], [455, 70, 1.4], [590, 190, 1], [730, 60, 1.8],
-          [890, 130, 1.2], [1005, 80, 1], [1230, 60, 1.5], [1345, 160, 1.1], [665, 120, 1],
-          [210, 220, 1], [1130, 240, 1.2], [40, 170, 1.3], [960, 210, 1],
-        ].map(([x, y, r], i) => (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r={r}
-            className={`fill-sand-50 ${motionOK && i % 3 === 0 ? "anim-shimmer" : ""}`}
-          />
-        ))}
-      </motion.g>
+      {/* the assembled dark gate, brought to life — fades in over the plates */}
+      {heroLoopOK && <HeroGateLoop y={live(nearY)} />}
 
-      {/* orrery on the left: a rayed sun by day, a half moon by night */}
-      <motion.g style={motionOK ? { y: farY } : undefined}>
-        <circle cx="280" cy="170" r="86" className="fill-gold-300 dark:fill-sand-100" opacity="0.16" />
+      {/* a scrim under the copy: the gate is busy, the words come first */}
+      <div
+        className={`absolute inset-0 bg-gradient-to-r to-transparent ${
+          theme === "dark" ? "from-pine-950/90 via-pine-950/40" : "from-sand-100/92 via-sand-100/45"
+        }`}
+      />
 
-        {/* sun — parchment hours only */}
-        <g className="dark:hidden">
-          <circle cx="280" cy="170" r="52" className="fill-gold-400" />
-          <circle cx="280" cy="170" r="42" className="fill-gold-300" />
-          <g strokeWidth="4" strokeLinecap="round" className="stroke-gold-500">
-            {Array.from({ length: 12 }, (_, i) => (
-              <path key={i} d="M280 104 L280 88" transform={`rotate(${i * 30} 280 170)`} />
-            ))}
-          </g>
+      {/* light thrown from the moon side */}
+      <div className="qa-rays" />
+
+      {/* the set sinks into the page rather than stopping at an edge */}
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[var(--bg)] to-transparent" />
+
+      {/* the drawn layer: stars and the orrery rings */}
+      <motion.svg
+        viewBox="0 0 1440 810"
+        preserveAspectRatio="xMidYMax slice"
+        className="absolute inset-0 h-full w-full"
+        style={motionOK ? { y: farY } : undefined}
+      >
+        <g className="opacity-20 dark:opacity-90">
+          {[
+            [120, 90, 1.6], [310, 150, 1.1], [455, 70, 1.4], [590, 190, 1], [730, 60, 1.8],
+            [890, 130, 1.2], [1005, 80, 1], [1230, 60, 1.5], [1345, 160, 1.1], [665, 120, 1],
+            [210, 220, 1], [1130, 240, 1.2], [40, 170, 1.3], [960, 210, 1],
+          ].map(([x, y, r], i) => (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r={r}
+              className={`fill-sand-50 ${motionOK && i % 3 === 0 ? "anim-shimmer" : ""}`}
+            />
+          ))}
         </g>
 
-        {/* half moon — obsidian hours only */}
-        <g className="hidden dark:block">
-          <circle cx="280" cy="170" r="56" fill="none" strokeWidth="1" className="stroke-sand-100" opacity="0.3" />
-          <path d="M280 114 A56 56 0 0 1 280 226 Z" className="fill-sand-100" opacity="0.95" />
-          <g className="fill-sand-400" opacity="0.5">
-            <circle cx="300" cy="150" r="8" />
-            <circle cx="312" cy="184" r="5" />
-            <circle cx="294" cy="206" r="4" />
-          </g>
-        </g>
-
+        {/* orrery rings turning about the moon */}
         <g className={motionOK ? "anim-orrery" : undefined}>
           <circle
             cx="280"
@@ -103,126 +137,120 @@ export function ArcaneScene({ scrollY }: { scrollY: MotionValue<number> }) {
           />
           <circle cx="138" cy="170" r="4" className="fill-teal-500 dark:fill-gold-300" />
         </g>
-      </motion.g>
+      </motion.svg>
 
-      {/* floating rune monoliths */}
-      <motion.g style={motionOK ? { y: farY } : undefined}>
-        <g className={motionOK ? "anim-float" : undefined}>
-          <path d="M212 340 L232 208 L266 226 L258 352 Z" className="fill-pine-300 dark:fill-pine-700" />
-          <path d="M232 208 L266 226 L262 262 L236 246 Z" className="fill-pine-400 dark:fill-pine-600" opacity="0.6" />
-          <g strokeWidth="3" strokeLinecap="round" className={`stroke-teal-600 dark:stroke-teal-300 ${motionOK ? "anim-shimmer" : ""}`}>
-            <path d="M238 268 L252 268" />
-            <path d="M240 288 L254 282" />
-            <path d="M241 308 L253 312" />
-          </g>
-          <path d="M228 384 L244 372 L256 388 L240 396 Z" className="fill-pine-300 dark:fill-pine-700" opacity="0.55" />
-        </g>
-        <g className={motionOK ? "anim-float-slow" : undefined}>
-          <path d="M604 232 L618 152 L642 166 L636 242 Z" className="fill-pine-300 dark:fill-pine-700" opacity="0.85" />
-          <g strokeWidth="2.5" strokeLinecap="round" className={`stroke-gold-500 dark:stroke-gold-300 ${motionOK ? "anim-shimmer" : ""}`}>
-            <path d="M618 188 L630 186" />
-            <path d="M619 204 L631 206" />
-          </g>
-          <path d="M612 268 L626 260 L634 272 L620 278 Z" className="fill-pine-300 dark:fill-pine-700" opacity="0.4" />
-        </g>
-        <g className={motionOK ? "anim-float" : undefined}>
-          <path d="M1310 372 L1328 268 L1356 284 L1348 384 Z" className="fill-pine-300 dark:fill-pine-700" opacity="0.9" />
-          <g strokeWidth="3" strokeLinecap="round" className={`stroke-teal-600 dark:stroke-teal-300 ${motionOK ? "anim-shimmer" : ""}`}>
-            <path d="M1330 310 L1344 306" />
-            <path d="M1331 330 L1345 332" />
-          </g>
-        </g>
-      </motion.g>
+      {/* low mist over the whole set */}
+      <div className="qa-mist" />
+    </div>
+  );
+}
 
-      {/* far spire skyline */}
-      <motion.g style={motionOK ? { y: farY } : undefined}>
-        <path d="M-20 560 L40 470 L58 486 L74 402 L92 486 L110 470 L170 560 Z" className="fill-pine-200 dark:fill-pine-800" />
-        <path d="M150 560 L216 420 L232 300 L250 420 L316 560 Z" className="fill-pine-300 dark:fill-pine-850" />
-        <path d="M380 560 L430 460 L444 380 L460 460 L512 560 Z" className="fill-pine-200 dark:fill-pine-800" />
-        <path d="M1150 560 L1216 430 L1236 330 L1258 430 L1330 560 Z" className="fill-pine-300 dark:fill-pine-850" />
-        <path d="M1320 560 L1382 450 L1400 396 L1420 450 L1460 560 Z" className="fill-pine-200 dark:fill-pine-800" />
-        {/* lit windows in the far towers */}
-        <g className={`fill-gold-400 dark:fill-gold-300 ${motionOK ? "anim-flicker" : ""}`}>
-          <rect x="227" y="380" width="10" height="16" rx="4" />
-          <rect x="439" y="424" width="9" height="14" rx="4" />
-          <rect x="1231" y="392" width="10" height="16" rx="4" />
-        </g>
-      </motion.g>
+/** One theme's three plates. */
+function Plates({
+  theme,
+  farY,
+  midY,
+  nearY,
+  skyX,
+  midX,
+  foreX,
+}: {
+  theme: "dark" | "light";
+  farY?: MotionValue<number>;
+  midY?: MotionValue<number>;
+  nearY?: MotionValue<number>;
+  skyX?: MotionValue<number>;
+  midX?: MotionValue<number>;
+  foreX?: MotionValue<number>;
+}) {
+  const src = (layer: string) => `${BASE}hero/${theme}-${layer}.webp`;
+  return (
+    <>
+      <motion.img
+        src={src("sky")}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{ y: farY, x: skyX }}
+        decoding="async"
+      />
+      <motion.img
+        src={src("mid")}
+        alt=""
+        className="absolute inset-x-0 bottom-[20%] w-full object-contain object-bottom opacity-95"
+        style={{ y: midY, x: midX }}
+        decoding="async"
+      />
+      <motion.img
+        src={src("fore")}
+        alt=""
+        className="absolute inset-x-0 bottom-0 w-full object-contain object-bottom"
+        style={{ y: nearY, x: foreX }}
+        decoding="async"
+      />
+    </>
+  );
+}
 
-      {/* mid ridge with the brass conduit */}
-      <motion.g style={motionOK ? { y: midY } : undefined}>
-        <path d="M-40 640 L120 480 L260 540 L360 452 L470 640 Z" className="fill-pine-400 dark:fill-pine-800" />
-        <path d="M330 640 L470 490 L560 570 L640 512 L760 640 Z" className="fill-pine-300 dark:fill-pine-850" />
-        <path d="M880 640 L1000 486 L1120 570 L1230 494 L1360 640 Z" className="fill-pine-400 dark:fill-pine-800" />
-        <path d="M120 480 L260 540 L200 640 L60 640 Z" className="fill-pine-500 dark:fill-pine-900" opacity="0.45" />
-        <path d="M1000 486 L1120 570 L1050 640 L940 640 Z" className="fill-pine-500 dark:fill-pine-900" opacity="0.4" />
+/**
+ * The dark hero, gently alive: an 8s silent loop of the assembled gate —
+ * flickering lantern, curling mist, a pulsing keystone rune — faded in over
+ * the painted plates. Mounted only when the browser is idle so it never
+ * costs the first paint, and paused whenever the hero scrolls out of view.
+ * The caller gates it to desktop + dark + motion; here we handle timing.
+ */
+function HeroGateLoop({ y }: { y?: MotionValue<number> }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [mount, setMount] = useState(false);
+  const [ready, setReady] = useState(false);
 
-        {/* riveted conduit carrying the arcade's charge */}
-        <rect x="540" y="586" width="380" height="16" rx="8" className="fill-bark-500 dark:fill-bark-700" />
-        <rect x="540" y="589" width="380" height="4" rx="2" className={`fill-gold-400 dark:fill-teal-400 ${motionOK ? "anim-shimmer" : ""}`} opacity="0.9" />
-        {[0, 1, 2, 3].map((i) => (
-          <g key={i}>
-            <rect x={566 + i * 96} y={602} width={14} height={54} className="fill-pine-500 dark:fill-pine-700" />
-            <circle cx={573 + i * 96} cy={594} r={3} className="fill-gold-300 dark:fill-gold-400" />
-          </g>
-        ))}
-        <circle cx="920" cy="594" r="12" fill="none" strokeWidth="3" className="stroke-gold-500 dark:stroke-gold-400" />
-        <path d="M920 585 L920 603 M911 594 L929 594" strokeWidth="2.5" className="stroke-gold-500 dark:stroke-gold-400" />
-      </motion.g>
+  // wait for an idle moment before we even create the <video> element
+  useEffect(() => {
+    const w = window as typeof window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    // timeout so the perpetually-animating hero still mounts the loop
+    const id = w.requestIdleCallback
+      ? w.requestIdleCallback(() => setMount(true), { timeout: 2000 })
+      : window.setTimeout(() => setMount(true), 1200);
+    return () => {
+      if (w.cancelIdleCallback) w.cancelIdleCallback(id);
+      else clearTimeout(id);
+    };
+  }, []);
 
-      {/* foreground: the gate of the arcade */}
-      <motion.g style={motionOK ? { y: nearY } : undefined}>
-        <path d="M-40 810 L-40 700 L260 646 L620 706 L1010 652 L1440 716 L1440 810 Z" className="fill-sand-200 dark:fill-pine-850" />
-        <path d="M-40 810 L-40 750 L360 702 L820 764 L1240 712 L1440 748 L1440 810 Z" className="fill-sand-100 dark:fill-pine-900" />
+  // play only while the hero is on screen
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) v.play().catch(() => {});
+        else v.pause();
+      },
+      { threshold: 0.05 },
+    );
+    io.observe(v);
+    return () => io.disconnect();
+  }, [mount]);
 
-        {/* low mist */}
-        <g className={motionOK ? "anim-drift-slow" : undefined} opacity="0.25">
-          <ellipse cx="400" cy="742" rx="260" ry="26" className="fill-sand-50 dark:fill-pine-600" />
-          <ellipse cx="1140" cy="768" rx="300" ry="30" className="fill-sand-50 dark:fill-pine-600" />
-        </g>
-
-        {/* the gate: ogive arch, keystone rune, brass trim */}
-        <g>
-          <path d="M990 810 L990 648 L1088 566 L1186 648 L1186 810 Z" className="fill-pine-600 dark:fill-pine-850" />
-          <path d="M1010 810 L1010 660 L1088 594 L1166 660 L1166 810 Z" className="fill-pine-700 dark:fill-pine-900" />
-          <path
-            d="M1030 810 L1030 690 Q1030 636 1088 614 Q1146 636 1146 690 L1146 810 Z"
-            className={`fill-gold-300 dark:fill-teal-400 ${motionOK ? "anim-flicker" : ""}`}
-            opacity="0.85"
-          />
-          <path d="M1080 574 L1096 574 L1096 590 L1080 590 Z" transform="rotate(45 1088 582)" className={`fill-teal-500 dark:fill-gold-300 ${motionOK ? "anim-shimmer" : ""}`} />
-          <rect x="980" y="644" width="216" height="8" className="fill-bark-500 dark:fill-bark-700" />
-          <circle cx="996" cy="648" r="2.5" className="fill-gold-400" />
-          <circle cx="1180" cy="648" r="2.5" className="fill-gold-400" />
-        </g>
-
-        {/* stone steps up to the gate */}
-        <g className="fill-pine-400 dark:fill-pine-700">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <rect key={i} x={886 + i * 22} y={776 - i * 18} width={28} height={12} rx={2} />
-          ))}
-        </g>
-
-        {/* lantern post on the left */}
-        <g>
-          <rect x="292" y="700" width="8" height="110" className="fill-bark-500 dark:fill-bark-700" />
-          <path d="M296 700 L296 678 L342 678" fill="none" strokeWidth="7" strokeLinecap="round" className="stroke-bark-500 dark:stroke-bark-700" />
-          <path d="M342 682 L342 700" strokeWidth="2.5" className="stroke-bark-500 dark:stroke-bark-700" />
-          <circle cx="342" cy="712" r="16" className="fill-pine-700 dark:fill-pine-850" />
-          <circle cx="342" cy="712" r="10" className={`fill-gold-300 dark:fill-gold-300 ${motionOK ? "anim-flicker" : ""}`} />
-        </g>
-
-        {/* rune obelisk on the right of the lantern */}
-        <g>
-          <path d="M430 810 L438 716 L462 716 L470 810 Z" className="fill-pine-600 dark:fill-pine-800" />
-          <g strokeWidth="3" strokeLinecap="round" className={`stroke-teal-600 dark:stroke-teal-300 ${motionOK ? "anim-shimmer" : ""}`}>
-            <path d="M444 736 L456 736" />
-            <path d="M445 754 L457 750" />
-            <path d="M446 772 L456 776" />
-          </g>
-        </g>
-      </motion.g>
-    </svg>
+  if (!mount) return null;
+  return (
+    <motion.video
+      ref={ref}
+      className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+        ready ? "opacity-100" : "opacity-0"
+      }`}
+      style={{ y }}
+      src={`${BASE}hero/gate-loop.mp4`}
+      muted
+      loop
+      playsInline
+      autoPlay
+      preload="none"
+      aria-hidden
+      onCanPlay={() => setReady(true)}
+    />
   );
 }
 

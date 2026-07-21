@@ -95,6 +95,7 @@ export function MapTapEasy({
     setGuess({ lat, lon });
     setResult(r);
     setTotal((t) => t + r.points);
+    api.versus?.onProgress({ role: api.versus.role, score: total + r.points, step: round });
   };
 
   const next = () => {
@@ -118,27 +119,31 @@ export function MapTapEasy({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div
-          className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1"
-          role="tablist"
-          aria-label="Map Drop mode"
-        >
-          {difficulties.map((d) => (
-            <button
-              key={d}
-              role="tab"
-              aria-selected={difficulty === d}
-              onClick={() => onPick(d)}
-              className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
-                difficulty === d
-                  ? "bg-[var(--card-2)] text-[var(--ink)]"
-                  : "qa-muted hover:text-[var(--ink)]"
-              }`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
+        {api.versus ? (
+          <div /> /* difficulty is fixed for a versus match */
+        ) : (
+          <div
+            className="flex rounded-xl border border-[var(--line)] bg-[var(--card)] p-1"
+            role="tablist"
+            aria-label="Map Drop mode"
+          >
+            {difficulties.map((d) => (
+              <button
+                key={d}
+                role="tab"
+                aria-selected={difficulty === d}
+                onClick={() => onPick(d)}
+                className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
+                  difficulty === d
+                    ? "bg-[var(--card-2)] text-[var(--ink)]"
+                    : "qa-muted hover:text-[var(--ink)]"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="text-right">
           <p className="font-display text-3xl font-semibold tabular-nums tracking-wider">{scoreStr}</p>
           <p className="text-xs qa-muted">
