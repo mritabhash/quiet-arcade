@@ -146,10 +146,10 @@ export function GameCard({
           </p>
           <Link
             to={`/games/${meta.id}`}
-            className="inline-flex items-center gap-1.5 rounded-sm border border-gold-600/50 bg-clay-500 px-4 py-2 text-sm font-semibold text-sand-50 shadow-[0_3px_0_0_#511f12] transition-all hover:bg-clay-600 active:translate-y-[2px] active:shadow-none dark:border-gold-400/40"
+            className="group/btn inline-flex items-center gap-1.5 rounded-lg border border-gold-600/50 bg-clay-500 px-4 py-2 text-sm font-semibold text-sand-50 shadow-[0_8px_18px_-10px_rgba(81,31,18,0.9)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-clay-600 hover:shadow-[0_12px_24px_-10px_rgba(81,31,18,0.95)] active:translate-y-0 dark:border-gold-400/40"
           >
             Enter
-            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 transition-transform duration-300 ease-out group-hover/btn:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 8 H13 M9 4 L13 8 L9 12" />
             </svg>
           </Link>

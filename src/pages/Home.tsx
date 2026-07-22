@@ -37,8 +37,8 @@ export function HomePage() {
               </p>
             </BlurReveal>
             <BlurReveal delay={0.12}>
-              <h1 className="rune-glow mt-4 font-display text-7xl font-semibold leading-[0.95] text-pine-900 dark:text-sand-50 sm:text-9xl">
-                Quiet Arcade
+              <h1 className="rune-glow mt-4 font-display text-7xl font-semibold leading-[0.9] tracking-[-0.03em] text-pine-900 dark:text-sand-50 sm:text-9xl">
+                Quiet <span className="text-gold-600 dark:text-gold-300">Arcade</span>
               </h1>
             </BlurReveal>
             <BlurReveal delay={0.24}>
@@ -51,13 +51,16 @@ export function HomePage() {
               <div className="mt-9 flex flex-wrap items-center gap-4">
                 <a
                   href="#games"
-                  className="inline-flex items-center gap-2 border border-gold-600/60 bg-clay-500 px-7 py-3 font-display text-xl text-sand-50 shadow-[0_4px_0_0_#511f12] transition-all hover:bg-clay-600 active:translate-y-[3px] active:shadow-none dark:border-gold-400/50"
+                  className="group inline-flex items-center gap-2 rounded-xl border border-gold-600/50 bg-clay-500 px-7 py-3 font-display text-xl text-sand-50 shadow-[0_10px_24px_-12px_rgba(81,31,18,0.9)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-clay-600 hover:shadow-[0_16px_32px_-12px_rgba(81,31,18,0.95)] active:translate-y-0 dark:border-gold-400/40"
                 >
                   Enter the hall
+                  <svg viewBox="0 0 16 16" className="h-4 w-4 transition-transform duration-300 ease-out group-hover:translate-x-1" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M3 8 H13 M9 4 L13 8 L9 12" />
+                  </svg>
                 </a>
                 <Link
                   to="/stats"
-                  className="inline-flex items-center gap-2 border border-pine-700/30 bg-sand-50/60 px-7 py-3 font-display text-xl text-pine-900 backdrop-blur transition-colors hover:bg-sand-50 dark:border-gold-400/25 dark:bg-pine-900/60 dark:text-sand-50 dark:hover:bg-pine-900"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--card)]/60 px-7 py-3 font-display text-xl text-pine-900 backdrop-blur transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-[var(--card)] dark:text-sand-50"
                 >
                   Consult the ledger
                 </Link>

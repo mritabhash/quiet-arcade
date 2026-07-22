@@ -13,7 +13,16 @@ import {
 } from "framer-motion";
 import { useSettings } from "../context/SettingsContext";
 
-export const EASE: [number, number, number, number] = [0.21, 0.47, 0.32, 0.98];
+/**
+ * One cinematic ease shared across the whole app: a long, soft ease-out
+ * (≈ easeOutQuint) so entrances glide to rest instead of snapping. Retuning
+ * this single curve re-times every transition that imports it.
+ */
+export const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+/** Symmetric curve for things that travel both in and out (drawers, dials). */
+export const EASE_IN_OUT: [number, number, number, number] = [0.65, 0, 0.35, 1];
+/** Shared duration scale, in seconds — keep motion timing consistent. */
+export const DUR = { fast: 0.28, base: 0.5, slow: 0.9 } as const;
 
 /** A band of fog between sections; it drifts as you pass it. */
 export function MistDivider() {

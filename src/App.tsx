@@ -27,13 +27,25 @@ import { CastPage } from "./pages/Cast";
 import { VersusPage } from "./pages/VersusPage";
 import { VersusRoomPage } from "./pages/VersusRoomPage";
 
+/**
+ * Route transition: a quick, clean exit (opacity only, no lingering blur) so
+ * the outgoing page clears fast, then a longer buttery glide-in for the new
+ * one. The asymmetry is what kills the old "blur-out then blur-in" stutter
+ * under AnimatePresence mode="wait".
+ */
+const pageVariants = {
+  initial: { opacity: 0, y: 18, filter: "blur(8px)" },
+  enter: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.6, ease: EASE } },
+  exit: { opacity: 0, y: -6, filter: "blur(0px)", transition: { duration: 0.22, ease: EASE } },
+};
+
 function Page({ children }: { children: React.ReactNode }) {
   return (
     <motion.main
-      initial={{ opacity: 0, y: 14, filter: "blur(6px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-      transition={{ duration: 0.4, ease: EASE }}
+      variants={pageVariants}
+      initial="initial"
+      animate="enter"
+      exit="exit"
       className="min-h-[70vh]"
     >
       {children}
@@ -75,11 +87,15 @@ export default function App() {
         Skip to content
       </a>
       <ScrollProgress />
-      <AmbientVideo />
+      {/* the games corridor is its own opaque 3D world — the site-wide
+          ambient layers would only paint over it and waste cycles there */}
+      {location.pathname !== "/games" && <AmbientVideo />}
       <PageAurora pathname={location.pathname} />
-      <AmbientRain />
-      <GlowWorms />
-      <SigilDial />
+      {location.pathname !== "/games" && <AmbientRain />}
+      {/* glow-worms are a home-screen treat only: a full-screen canvas over
+          the reading pages was clutter, not atmosphere */}
+      {location.pathname === "/" && <GlowWorms />}
+      {location.pathname !== "/games" && <SigilDial />}
       <ArcadeCat />
       {/* page residents live here, outside the animated main, so
           position:fixed truly pins them to the viewport */}

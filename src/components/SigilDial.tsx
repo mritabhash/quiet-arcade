@@ -126,7 +126,7 @@ export function SigilDial() {
     <div
       key={pathname.split("/")[1] || "home"}
       aria-hidden
-      className={`pointer-events-none fixed z-30 h-14 w-14 opacity-80 sm:h-40 sm:w-40 md:h-48 md:w-48 ${
+      className={`pointer-events-none fixed z-30 h-14 w-14 opacity-45 sm:h-40 sm:w-40 md:h-48 md:w-48 ${
         cfg.side === "left" ? "-left-6 sm:-left-16 md:-left-20" : "-right-6 sm:-right-16 md:-right-20"
       }`}
       style={{ top: `${cfg.top}%`, transform: "translateY(-50%)" }}
