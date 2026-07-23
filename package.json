@@ -10,7 +10,7 @@
     "gen:shapes": "node scripts/genShapes.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "node --test tests/placeImages.test.ts tests/globeTextureQuality.test.ts",
+    "test": "node --test tests/placeImages.test.ts tests/globeTextureQuality.test.ts tests/mapillary.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
