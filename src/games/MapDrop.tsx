@@ -14,27 +14,22 @@ import { LazyGlobeCanvas as GlobeCanvas } from "../components/LazyGlobeCanvas";
 import { Button, Chip } from "../components/ui";
 import { Counter, EASE } from "../components/motion";
 import { RabbitGuide, type RabbitMood } from "../components/RabbitGuide";
-import { easyFreeHintsFor } from "../lib/easyMode";
 import { read, write } from "../lib/storage";
 import { fetchPlaceImages, type PlaceImage } from "../lib/placeImages";
 import { ImageLightbox } from "../components/ImageLightbox";
-import { MapTapEasy } from "./MapTapEasy";
+import { MapDropStreetView } from "./MapDropStreetView";
 
 /** Hard mode: hints come one at a time — ceiling by hints revealed, index is (revealed - 1). */
 const HINT_POINTS = [5000, 4300, 3600, 2900, 2200, 1500, 800] as const;
 const MAX_SCORE = 5000;
-/** Moderate mode: a photo round. One geotagged picture opens at the ceiling;
+/** Easy mode: a photo round. One geotagged picture opens at the ceiling;
  *  each extra photo (up to five) costs a flat fee. */
-const MODERATE_MAX_SCORE = 4000;
-const MODERATE_IMG_COST = 150;
-const MODERATE_MAX_IMAGES = 5;
-// Moderate promises five separate photo clues; an incomplete/diversity-thin
+const EASY_PHOTO_MAX_SCORE = 4000;
+const EASY_PHOTO_IMG_COST = 150;
+const EASY_PHOTO_MAX_IMAGES = 5;
+// Easy promises five separate photo clues; an incomplete/diversity-thin
 // result blocks the round and offers a retry instead of counting repeats.
-const MODERATE_MIN_IMAGES = MODERATE_MAX_IMAGES;
-/** Easy mode: three famous facts are free; three closer looks cost a flat fee each. */
-const EASY_MAX_SCORE = 3000;
-const EASY_HINT_COST = 200;
-const EASY_TOTAL_HINTS = 6;
+const EASY_PHOTO_MIN_IMAGES = EASY_PHOTO_MAX_IMAGES;
 /** Novice mode: the answer's name is free; one pricey reveal says where it sits. */
 const NOVICE_MAX_SCORE = 5000;
 const NOVICE_HINT_COST = 2000;
@@ -102,9 +97,9 @@ export function MapDropGame({ api }: { api: GameApi }) {
   // Every player gets the same Daily place regardless of their saved setting.
   // The shared Daily pool is photo-capable so Moderate can keep its contract.
   const puzzlePool =
-    api.versus && initialDifficulty === "moderate"
+    api.versus && initialDifficulty === "easy"
       ? MAP_DROP_VERIFIED_PHOTO_PUZZLES
-      : api.mode === "daily" || initialDifficulty === "moderate"
+      : api.mode === "daily" || initialDifficulty === "easy"
       ? MAP_DROP_PHOTO_PUZZLES
       : MAP_DROP_PUZZLES;
   const place = useMemo(() => {
@@ -119,24 +114,22 @@ export function MapDropGame({ api }: { api: GameApi }) {
     return puzzlePool[pickFreshIndex("map-drop", ids, rng)];
   }, [api.seed, api.mode, api.versus, puzzlePool]);
 
-  const easyFree = useMemo(() => easyFreeHintsFor(place, api.seed), [place, api.seed]);
-  // Moderate is a photo round fetched from Wikimedia Commons: images === null
+  // Easy is a photo round fetched from Wikimedia Commons: images === null
   // while loading, imagesFailed when the spot lacks enough usable pictures.
   const [images, setImages] = useState<PlaceImage[] | null>(null);
   const [imagesFailed, setImagesFailed] = useState(false);
   const [photoAttempt, setPhotoAttempt] = useState(0);
   const [zoomImg, setZoomImg] = useState<PlaceImage | null>(null);
-  // Easy can fall back to hard when its country data is missing. Moderate must
-  // wait for all five photos so its clue and scoring contract never changes.
-  const eff: Difficulty =
-    difficulty === "easy" && easyFree === null ? "hard" : difficulty;
-  const moderateReady =
-    difficulty === "moderate" && images?.length === MODERATE_MAX_IMAGES;
-  const moderateLoading = difficulty === "moderate" && !imagesFailed && images === null;
-  const moderateUnavailable = difficulty === "moderate" && imagesFailed;
-  const roundReady = difficulty !== "moderate" || moderateReady;
+  // Novice/hard reveal one clue at a time; Easy waits for all five photos so its
+  // clue and scoring contract never changes. (Moderate is delegated below.)
+  const eff: Difficulty = difficulty;
+  const photoReady =
+    difficulty === "easy" && images?.length === EASY_PHOTO_MAX_IMAGES;
+  const photoLoading = difficulty === "easy" && !imagesFailed && images === null;
+  const photoUnavailable = difficulty === "easy" && imagesFailed;
+  const roundReady = difficulty !== "easy" || photoReady;
 
-  // novice/moderate/hard all reveal one at a time; easy is delegated to MapTapEasy
+  // novice/hard reveal one at a time; easy reveals photos; moderate is delegated
   const [revealed, setRevealed] = useState(1);
   const [pin, setPin] = useState<{ x: number; y: number } | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -161,17 +154,17 @@ export function MapDropGame({ api }: { api: GameApi }) {
     return () => clearTimeout(t);
   }, [poke, outcome]);
 
-  // Fetch moderate mode's geotagged photos when the place or mode changes.
+  // Fetch easy mode's geotagged photos when the place or mode changes.
   useEffect(() => {
-    if (difficulty !== "moderate") return;
+    if (difficulty !== "easy") return;
     let cancelled = false;
     const ctrl = new AbortController();
     setImages(null);
     setImagesFailed(false);
-    fetchPlaceImages(place, MODERATE_MAX_IMAGES, ctrl.signal)
+    fetchPlaceImages(place, EASY_PHOTO_MAX_IMAGES, ctrl.signal)
       .then((list) => {
         if (cancelled) return;
-        if (list.length === MODERATE_MIN_IMAGES) setImages(list);
+        if (list.length === EASY_PHOTO_MIN_IMAGES) setImages(list);
         else setImagesFailed(true);
       })
       .catch(() => {
@@ -185,34 +178,27 @@ export function MapDropGame({ api }: { api: GameApi }) {
 
   const imageCount = images?.length ?? 0;
   const totalHints =
-    eff === "hard"
+    difficulty === "hard"
       ? 7
-      : eff === "novice"
+      : difficulty === "novice"
         ? NOVICE_TOTAL_HINTS
-        : eff === "easy"
-          ? EASY_TOTAL_HINTS
-          : imageCount; // moderate reveals the geotagged photos one by one
+        : imageCount; // easy reveals the geotagged photos one by one
   const hints =
-    eff === "novice"
+    difficulty === "novice"
       ? [
           place.kind === "mountains"
             ? `The mountains are called ${place.name}.`
             : `The ${place.kind}'s name is ${place.name}.`,
           `You'll find it in ${place.country}.`,
         ]
-      : eff === "easy"
-        ? [...easyFree!.map((h) => h.text), ...place.hints.slice(0, 3)]
-        : place.hints;
+      : place.hints; // hard
   const ceiling =
-    eff === "novice"
+    difficulty === "novice"
       ? NOVICE_MAX_SCORE - (revealed - 1) * NOVICE_HINT_COST
-      : eff === "easy"
-        ? EASY_MAX_SCORE - (revealed - 3) * EASY_HINT_COST
-        : eff === "moderate"
-          ? MODERATE_MAX_SCORE - (revealed - 1) * MODERATE_IMG_COST
-          : HINT_POINTS[revealed - 1];
-  const maxScore =
-    eff === "easy" ? EASY_MAX_SCORE : eff === "moderate" ? MODERATE_MAX_SCORE : MAX_SCORE;
+      : difficulty === "easy"
+        ? EASY_PHOTO_MAX_SCORE - (revealed - 1) * EASY_PHOTO_IMG_COST
+        : HINT_POINTS[revealed - 1];
+  const maxScore = difficulty === "easy" ? EASY_PHOTO_MAX_SCORE : MAX_SCORE;
   const modeLabel = difficulty[0].toUpperCase() + difficulty.slice(1);
 
   const switchDifficulty = (d: Difficulty) => {
@@ -299,10 +285,10 @@ export function MapDropGame({ api }: { api: GameApi }) {
     });
   };
 
-  // Easy mode is the MapTap-style 3D globe game: five rounds, tap to place.
-  if (difficulty === "easy") {
+  // Moderate mode is the GeoGuessr street-view game: five rounds, Mapillary.
+  if (difficulty === "moderate") {
     return (
-      <MapTapEasy
+      <MapDropStreetView
         api={api}
         difficulties={DIFFICULTIES}
         difficulty={difficulty}
@@ -424,11 +410,11 @@ export function MapDropGame({ api }: { api: GameApi }) {
               <span className="text-sm font-normal qa-muted"> pts possible</span>
             </p>
             <p className="text-xs qa-muted">
-              {moderateLoading
+              {photoLoading
                 ? "Finding photos…"
-                : moderateUnavailable
+                : photoUnavailable
                   ? "Photos unavailable"
-                  : `${revealed} / ${totalHints} ${moderateReady ? "photos" : "hints"}`}
+                  : `${revealed} / ${totalHints} ${photoReady ? "photos" : "hints"}`}
             </p>
           </div>
         </div>
@@ -436,14 +422,14 @@ export function MapDropGame({ api }: { api: GameApi }) {
 
       <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)]">
         <div className="flex flex-col gap-2.5">
-          {moderateLoading ? (
+          {photoLoading ? (
             <div className="flex flex-col gap-2.5">
               <div className="h-44 w-full animate-pulse rounded-2xl bg-[var(--card-2)]" />
               <p className="text-xs qa-muted">
                 Fetching real photos taken near this place…
               </p>
             </div>
-          ) : moderateUnavailable ? (
+          ) : photoUnavailable ? (
             <div
               className="qa-card flex flex-col items-start gap-3 rounded-2xl px-4 py-4"
               role="alert"
@@ -452,7 +438,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
                 <p className="text-sm font-semibold">Five distinct photos are required</p>
                 <p className="mt-1 text-xs leading-snug qa-muted">
                   This photo set could not be completed. Retry to keep the same
-                  Moderate clues and scoring rules{api.versus ? " for this match" : ""}.
+                  Easy clues and scoring rules{api.versus ? " for this match" : ""}.
                 </p>
               </div>
               <Button
@@ -463,7 +449,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
                 Retry photos
               </Button>
             </div>
-          ) : moderateReady ? (
+          ) : photoReady ? (
             <div className="flex flex-col gap-2.5" aria-live="polite">
               {images!.slice(0, revealed).map((img, i) => (
                 <motion.figure
@@ -509,7 +495,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
                   key={`${difficulty}-${i}`}
                   initial={{ opacity: 0, x: -18, filter: "blur(6px)" }}
                   animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                  transition={{ duration: 0.5, ease: EASE, delay: i < (eff === "easy" ? 3 : 1) ? i * 0.15 : 0 }}
+                  transition={{ duration: 0.5, ease: EASE, delay: i < 1 ? i * 0.15 : 0 }}
                   className="qa-card rounded-2xl px-4 py-3"
                 >
                   <p className="text-[10px] font-bold uppercase tracking-widest qa-muted">
@@ -519,11 +505,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
                         : place.kind === "country"
                           ? "Continent"
                           : "Country"
-                      : eff === "easy"
-                        ? i < 3
-                          ? easyFree![i].label
-                          : `Closer look ${i - 2}`
-                        : `Hint ${i + 1}`}
+                      : `Hint ${i + 1}`}
                   </p>
                   <p className="mt-0.5 text-sm font-medium leading-snug">{hint}</p>
                 </motion.div>
@@ -531,8 +513,8 @@ export function MapDropGame({ api }: { api: GameApi }) {
             </div>
           )}
 
-          {!moderateLoading &&
-            !moderateUnavailable &&
+          {!photoLoading &&
+            !photoUnavailable &&
             (revealed < totalHints ? (
               <button
                 onClick={revealHint}
@@ -543,25 +525,23 @@ export function MapDropGame({ api }: { api: GameApi }) {
                 className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-3 text-left transition-colors hover:bg-[var(--card-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
               >
                 <p className="text-sm font-semibold">
-                  Reveal {moderateReady ? "photo" : "hint"} {revealed + 1}
+                  Reveal {photoReady ? "photo" : "hint"} {revealed + 1}
                 </p>
                 <p className="text-xs qa-muted">
                   {eff === "hard"
                     ? `Lowers your ceiling to ${HINT_POINTS[revealed].toLocaleString()} pts`
                     : eff === "novice"
                       ? `Costs ${NOVICE_HINT_COST.toLocaleString()} points — ceiling drops to ${(NOVICE_MAX_SCORE - revealed * NOVICE_HINT_COST).toLocaleString()} pts`
-                      : eff === "easy"
-                        ? `Costs ${EASY_HINT_COST} points — ceiling drops to ${(EASY_MAX_SCORE - (revealed - 2) * EASY_HINT_COST).toLocaleString()} pts`
-                        : `Costs ${MODERATE_IMG_COST} points — ceiling drops to ${(MODERATE_MAX_SCORE - revealed * MODERATE_IMG_COST).toLocaleString()} pts`}
+                      : `Costs ${EASY_PHOTO_IMG_COST} points — ceiling drops to ${(EASY_PHOTO_MAX_SCORE - revealed * EASY_PHOTO_IMG_COST).toLocaleString()} pts`}
                 </p>
               </button>
             ) : (
               <Chip className="self-start">
-                {moderateReady
+                {photoReady
                   ? `All ${totalHints} photos are out`
                   : totalHints === 2
                     ? "Both hints are out"
-                    : `All ${totalHints === 7 ? "seven" : "three"} hints are out`}
+                    : "All seven hints are out"}
               </Chip>
             ))}
 
@@ -596,7 +576,7 @@ export function MapDropGame({ api }: { api: GameApi }) {
             </Button>
             <p className="text-xs leading-snug qa-muted">
               {!roundReady
-                ? moderateLoading
+                ? photoLoading
                   ? "Waiting for five distinct photo clues…"
                   : api.versus
                     ? "Retry the photo set to continue this match."
