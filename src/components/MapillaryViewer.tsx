@@ -42,5 +42,8 @@ export function MapillaryViewer({
     });
   }, [imageId]);
 
-  return <div ref={containerRef} className={className} />;
+  // App.tsx runs Lenis smooth-scroll with a global wheel listener that would
+  // otherwise scroll the page when the user wheels to zoom the panorama.
+  // `data-lenis-prevent` makes Lenis skip wheels whose path includes this node.
+  return <div ref={containerRef} className={className} data-lenis-prevent />;
 }
