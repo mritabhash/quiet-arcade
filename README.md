@@ -22,6 +22,25 @@ npm run build
 
 The production build is written to `dist/`.
 
+## Environment
+
+All environment variables are optional — the arcade runs fully offline without
+them. See `.env.example` for the full list; copy it to `.env.local` and fill in
+what you need.
+
+### Map Drop street view (optional)
+
+Map Drop's **Moderate** difficulty is a GeoGuessr-style round using
+[Mapillary](https://www.mapillary.com/) street imagery. To enable it:
+
+1. Create a free Mapillary account and register an app at
+   <https://www.mapillary.com/dashboard/developers>.
+2. Copy the app's **Client Token**.
+3. Put it in `.env.local` as `VITE_MAPILLARY_TOKEN=...` and restart `npm run dev`.
+
+Without a token, Moderate shows a disabled card and the other difficulties work
+normally.
+
 ## Deploy
 
 Quiet Arcade is a static website and can be deployed to Vercel, Netlify, Cloudflare Pages, GitHub Pages, or any static host.
